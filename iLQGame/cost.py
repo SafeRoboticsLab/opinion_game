@@ -608,6 +608,58 @@ class SemiquadraticCost(Cost):
       )
 
 
+class MaxVelCostPxDependent(Cost):
+
+  def __init__(
+      self, v_index, px_index, max_v, px_lb, px_ub, name="", horizon=None,
+      x_dim=None, ui_dim=None
+  ):
+    """
+    Penalize max velocity depending on the environment.
+    """
+    self._v_index = v_index
+    self._px_index = px_index
+    self._max_v = max_v
+    self._px_lb = px_lb
+    self._px_ub = px_ub
+    super(MaxVelCostPxDependent, self).__init__(name, horizon, x_dim, ui_dim)
+
+  @partial(jit, static_argnums=(0,))
+  def get_cost(
+      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
+  ) -> DeviceArray:
+    """
+    Evaluates this cost function on the given input state and/or control.
+
+    Args:
+        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
+        ui (DeviceArray, optional): control of the subsystem (nui,)
+        k (int, optional): time step. Defaults to 0.
+
+    Returns:
+        DeviceArray: scalar value of cost (scalar)
+    """
+
+    def true_fn(x):
+
+      def true_fn_px(x):
+        # return (x[self._v_index] - self._max_v)**2
+        return jnp.exp(x[self._v_index] - self._max_v)
+
+      def false_fn_px(x):
+        return 0.
+
+      return lax.cond(
+          self._px_lb < x[self._px_index] < self._px_ub, true_fn_px,
+          false_fn_px, x
+      )
+
+    def false_fn(x):
+      return 0.
+
+    return lax.cond(x[self._v_index] > self._max_v, true_fn, false_fn, x)
+
+
 class SemiquadraticPolylineCost(Cost):
 
   def __init__(
