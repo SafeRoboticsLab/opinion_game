@@ -24,15 +24,15 @@ import time
 import numpy as np
 import jax.numpy as jnp
 
-from iLQGame_Nash.cost import *
-from iLQGame_Nash.utils import *
-from iLQGame_Nash.geometry import *
-from iLQGame_Nash.constraint import *
-from iLQGame_Nash.dynamical_system import *
-from iLQGame_Nash.multiplayer_dynamical_system import *
+from iLQGame.cost import *
+from iLQGame.utils import *
+from iLQGame.geometry import *
+from iLQGame.constraint import *
+from iLQGame.dynamical_system import *
+from iLQGame.multiplayer_dynamical_system import *
 
-from iLQGame_Nash.ilq_solver import ILQSolver
-from iLQGame_Nash.player_cost import PlayerCost
+from iLQGame.ilq_solver import ILQSolver
+from iLQGame.player_cost import PlayerCost
 
 # Loads the config and track file.
 config = load_config("ex_corridor.yaml")
