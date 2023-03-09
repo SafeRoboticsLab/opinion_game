@@ -4,6 +4,10 @@ Jaxified iterative LQ solver.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil)
+
+TODO:
+  - Remove logger and visualizer
+  - Rewrite comments
 """
 
 import time
@@ -12,7 +16,7 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 
 from functools import partial
-from jax import jit, lax
+from jax import jit
 from jaxlib.xla_extension import DeviceArray
 import jax.numpy as jnp
 
@@ -24,7 +28,7 @@ class ILQSolver(object):
   def __init__(
       self, dynamics, player_costs, x0, Ps, alphas, alpha_scaling=0.05,
       max_iter=100, reference_deviation_weight=None, logger=None,
-      visualizer=None, u_constraints=None
+      visualizer=None, u_constraints=None, verbose=False
   ):
     """
         Initialize from dynamics, player costs, current state, and initial
@@ -70,6 +74,8 @@ class ILQSolver(object):
         jnp.zeros((ui_dim, self._horizon)) for ui_dim in self._dynamics._u_dims
     ]
     self._current_operating_point = (_current_x, _current_u)
+    self._best_operating_point = (_current_x, _current_u)
+    self._best_social_cost = 1e10
 
     # Fixed step size for the linesearch.
     self._alpha_scaling = alpha_scaling
@@ -87,6 +93,8 @@ class ILQSolver(object):
       self._logger.log("horizon", self._horizon)
       self._logger.log("x0", self._x0)
 
+    self._verbose = verbose
+
   def run(self):
     """ Run the algorithm for the specified parameters. """
 
@@ -102,41 +110,44 @@ class ILQSolver(object):
       current_xs = self._current_operating_point[0]
       current_us = self._current_operating_point[1]
       current_Ps = self._Ps
-      current_alphas = self._alphas
-      xs, us_list = self._compute_operating_point(
-          current_xs, current_us, current_Ps, current_alphas
-      )
+
+      total_cost_best = 1e10
+      for alpha_scaling in self._alpha_scaling:
+        current_alphas = self._alphas
+        current_alphas = [
+            (alpha_vec * alpha_scaling) for alpha_vec in current_alphas
+        ]
+        xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point(
+            current_xs, current_us, current_Ps, current_alphas
+        )
+        total_cost_alpha = sum([jnp.sum(costis) for costis in costs_alpha])
+
+        if total_cost_alpha < total_cost_best:
+          xs = xs_alpha
+          us_list = us_list_alpha
+          total_cost_best = total_cost_alpha
+
       self._last_operating_point = self._current_operating_point
       self._current_operating_point = (xs, us_list)
-      # # If this is the first time through, then set up reference deviation
-      # # costs and add to player costs. Otherwise, just update those costs.
-      # if self._reference_deviation_weight is not None and iteration == 0:
-      #   self._x_reference_cost = ReferenceDeviationCost(xs)
-      #   self._u_reference_costs = [ReferenceDeviationCost(ui) for ui in us]
 
-      #   for ii in range(self._num_players):
-      #     self._player_costs[ii].add_cost(
-      #         self._x_reference_cost, "x", self._reference_deviation_weight
-      #     )
-      #     self._player_costs[ii].add_cost(
-      #         self._u_reference_costs[ii], ii, self._reference_deviation_weight
-      #     )
-      # elif self._reference_deviation_weight is not None:
-      #   self._x_reference_cost.reference = self._last_operating_point[0]
-      #   for ii in range(self._num_players):
-      #     self._u_reference_costs[ii].reference = \
-      #         self._last_operating_point[1][ii]
-      print("(1) Reference computing time: ", time.time() - tt)
+      if total_cost_best < self._best_social_cost:
+        self._best_operating_point = self._current_operating_point
+        self._best_social_cost = total_cost_best
+
+      if self._verbose or iteration == 0:
+        print("- Reference computing time: ", time.time() - tt)
 
       # (2) Linearizes about this operating point.
       tt = time.time()
       As, Bs_list = self._linearize_dynamics(xs, us_list)
-      print("(2) Linearization computing time: ", time.time() - tt)
+      if self._verbose or iteration == 0:
+        print("- Linearization computing time: ", time.time() - tt)
 
       # (3) Quadraticize costs.
       tt = time.time()
       costs, lxs, Hxxs, Huus = self._quadraticize_costs(xs, us_list)
-      print("(3) Quadraticization time: ", time.time() - tt)
+      if self._verbose or iteration == 0:
+        print("- Quadraticization time: ", time.time() - tt)
 
       # (4) Compute feedback Nash equilibrium of the resulting LQ game.
       tt = time.time()
@@ -146,12 +157,14 @@ class ILQSolver(object):
       Hxxs = [np.asarray(Hxxs_i) for Hxxs_i in Hxxs]
       Huus = [np.asarray(Huus_i) for Huus_i in Huus]
       Ps, alphas = self._solve_lq_game(As, Bs_list, Hxxs, lxs, Huus)
-      print("(4) Forward & backward pass time: ", time.time() - tt)
+      if self._verbose or iteration == 0:
+        print("- Forward & backward pass time: ", time.time() - tt)
 
       # Accumulate total costs for both players.
       total_costs = [jnp.sum(costis) for costis in costs]
       print(
-          "Total cost for all players: ", total_costs, " | Iter. time: ",
+          "Iteration", iteration, "| Total cost for all players: ",
+          total_costs, " | Iter. time: ",
           time.time() - t_start, "\n"
       )
 
@@ -251,20 +264,25 @@ class ILQSolver(object):
       for ii in range(self._num_players):
         # Computes the feedback strategy.
         uii_ref = current_us[ii][:, k]
-        uii_k = uii_ref - Ps[ii][:, :, k] @ (
-            xs[:, k] - x_ref
-        ) - self._alpha_scaling * alphas[ii][:, k]
+        uii = uii_ref - Ps[ii][:, :, k] @ (xs[:, k] - x_ref) - alphas[ii][:, k]
 
         # Project to the control bound.
-        uii_k = self._u_constraints[ii].clip(uii_k)
+        uii = self._u_constraints[ii].clip(uii)
 
-        us_k.append(uii_k)
-        us_list[ii] = us_list[ii].at[:, k].set(uii_k)
+        us_k.append(uii)
+        us_list[ii] = us_list[ii].at[:, k].set(uii)
 
       # Computes the next state for the joint system.
       xs = xs.at[:, k + 1].set(self._dynamics.disc_time_dyn(xs[:, k], us_k))
 
-    return xs[:, :self._horizon], us_list
+    xs = xs[:, :self._horizon]
+
+    # Evaluates costs.
+    costs_list = [[] for _ in range(self._num_players)]
+    for ii in range(self._num_players):
+      costs_list[ii] = self._player_costs[ii].get_cost(xs, us_list[ii])
+
+    return xs, us_list, costs_list
 
   @partial(jit, static_argnums=(0,))
   def _linearize_dynamics(self, xs: DeviceArray,
@@ -402,8 +420,8 @@ class ILQSolver(object):
 
       Y = np.concatenate([B[ii].T @ Z[ii] @ A for ii in range(num_players)])
 
-      P, _, _, _ = np.linalg.lstsq(a=S, b=Y, rcond=None)
-      # P = np.linalg.pinv(S) @ Y
+      # P, _, _, _ = np.linalg.lstsq(a=S, b=Y, rcond=None)
+      P = np.linalg.pinv(S) @ Y
 
       P_split = [[] for _ in range(num_players)]
       for ii in range(num_players):

@@ -195,13 +195,45 @@ class Bicycle4D(DynamicalSystem):
     Returns:
         DeviceArray: next state (nx,)
     """
-    beta = jnp.atan((self._l_r / (self._l_f + self._l_r)) * jnp.tan(u[1]))
+    beta = jnp.arctan((self._l_r / (self._l_f + self._l_r)) * jnp.tan(u[1]))
 
     x0_dot = x[3] * jnp.cos(x[2] + beta)
     x1_dot = x[3] * jnp.sin(x[2] + beta)
     x2_dot = (x[3] / self._l_r) * jnp.sin(beta)
     x3_dot = u[0]
 
+    return jnp.hstack((x0_dot, x1_dot, x2_dot, x3_dot))
+
+
+class Car4D(DynamicalSystem):
+  """
+  4D car model. Dynamics are as follows
+                          \dot x     = v cos theta
+                          \dot y     = v sin theta
+                          \dot theta = v * tan(u2) / l
+                          \dot v     = u1
+  """
+
+  def __init__(self, l=3.0, T=0.1):
+    self._l = l  # inter-axle length (m)
+    super(Car4D, self).__init__(4, 2, T)
+
+  @partial(jit, static_argnums=(0,))
+  def cont_time_dyn(self, x: DeviceArray, u: DeviceArray) -> DeviceArray:
+    """
+    Computes the time derivative of state for a particular state/control.
+
+    Args:
+        x (DeviceArray): (nx,)
+        u (DeviceArray): (nu,)
+
+    Returns:
+        DeviceArray: next state (nx,)
+    """
+    x0_dot = x[3] * jnp.cos(x[2])
+    x1_dot = x[3] * jnp.sin(x[2])
+    x2_dot = x[3] * jnp.tan(u[1]) / self._l
+    x3_dot = u[0]
     return jnp.hstack((x0_dot, x1_dot, x2_dot, x3_dot))
 
 

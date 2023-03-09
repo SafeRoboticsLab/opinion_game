@@ -53,7 +53,7 @@ class PlayerCost(object):
     """
     total_cost = 0.
     for cost, weight in zip(self._costs, self._weights):
-      total_cost += weight * cost.get_cost(x, ui, k)
+      total_cost += weight * cost.get_traj_cost(x, ui)
     return total_cost
 
   @partial(jit, static_argnums=(0,))

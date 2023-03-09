@@ -1,27 +1,29 @@
 clear; close all; clc
 
 % Loads data.
-xs = double(readNPY('corridor/example1_baseline_xs.npy'));
+xs = double(readNPY('two_car/two_car_xs.npy'));
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
 
 % Sets parameters.
-option.keep_traj  = true;
+option.keep_traj  = false;
 option.is_fading  = true;
 option.t_skip     = 1; %3
 option.N_interp   = 1;
-option.t_start    = 4;
-option.t_end      = 20;
+option.t_start    = [];
+option.t_end      = [];
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;
-option.rotation = 0;    % Image rotation to align the front with the 
-                        % world-frame x-axis 
-option_H = option;      % Image coordinates of the back wheels centre 
-option.centre = [348; 103];
-option_H.centre = [50; 50];
-option.length = 0.3;    % Real world length for scaling
-option_H.length = 0.4;
+
+% Image rotation to align the front with the world-frame x-axis 
+option.rotation = 0;
+
+% Image coordinates of the centre of the back wheels
+option.centre = [348; 203];
+
+% Real world length for scaling
+option.length = 6;
 
 % Interpolates data.
 if option.N_interp == 1
@@ -73,23 +75,34 @@ if ~option.UI
 end
 hold on
 daspect([1,1,1])
-xlimSpan = [-2.5, 2.5];
-ylimSpan = [-1.0, 1.0];
+xlimSpan = [-5, 100];
+ylimSpan = [-6, 13];
 xlim(xlimSpan)
 ylim(ylimSpan)
 
 % Plots the road.
-% rd_bd_min = -0.5;
-% rd_bd_max = 0.5;
-% fill([xlimSpan(1), xlimSpan(1), xlimSpan(2), xlimSpan(2)],...
-%      [rd_bd_min, rd_bd_max, rd_bd_max, rd_bd_min],...
-%      [191,191,191]/255);    % Road color
-% plot(linspace(xlimSpan(1), xlimSpan(2), 2),...
-%      linspace(rd_bd_min, rd_bd_min, 2),...
-%      'k-','LineWidth',5)    % Road boundaries
-% plot(linspace(xlimSpan(1), xlimSpan(2), 2),...
-%      linspace(rd_bd_max, rd_bd_max, 2),...
-%      'k-','LineWidth',5)    % Road boundaries
+road_start = xlimSpan(1);
+road_end = xlimSpan(2);
+rd_bd_min = -3.5;
+rd_bd_max = 10.5;
+rd_center = (rd_bd_min+rd_bd_max)/2;
+grey_rgb = [150,150,150]/255;
+white_rgb = [255,255,255]/255;
+
+%   -> Road color
+fill([road_start, road_start, road_end, road_end],...
+     [ylimSpan(1), ylimSpan(2), ylimSpan(2), ylimSpan(1)], grey_rgb);
+%   -> Road boundaries
+plot(linspace(road_start, road_end, 2),...
+    linspace(rd_bd_min, rd_bd_min, 2),...
+    '-', 'Color', white_rgb, 'LineWidth', 5)
+plot(linspace(road_start, road_end, 2),...
+    linspace(rd_bd_max, rd_bd_max, 2),...
+    '-', 'Color', white_rgb, 'LineWidth', 5)
+%   -> Center line of the road
+plot(linspace(road_start, road_end, 2),...
+    linspace(rd_center, rd_center, 2),...
+    '--', 'Color', white_rgb, 'LineWidth', 8)
 
 % Plots agent movements.
 cnt = 1;
@@ -102,22 +115,25 @@ for t = t_start:t_end
     % Top-down view of the agents.
     xR_plt = XR(1:3, t);
     [option.image, ~, option.alpha] =...
-        imread('corridor/car_figures/ego_car.png');
-    option.alpha = option.alpha*alpha_vec(cnt);
+        imread('two_car/car_figures/car_robot_y.png');
+    try
+        option.alpha = option.alpha*alpha_vec(cnt);
+    catch
+        option.alpha = option.alpha*alpha_vec(end);
+    end
     [~, hR] = plot_vehicle(xR_plt', 'model', option);
     xH_plt = XH(1:3, t);
-    if mod(cnt,2) == 0
-        [option_H.image, ~, option_H.alpha] =...
-            imread('corridor/car_figures/human.png');
-    else
-        [option_H.image, ~, option_H.alpha] =...
-            imread('corridor/car_figures/human_2.png');
-    end
+    [option.image, ~, option.alpha] =...
+        imread('two_car/car_figures/car_human.png');
     if ~option.keep_traj && t~=t_end && t>t_start
         delete(hH)
     end
-    option_H.alpha = option_H.alpha*alpha_vec(cnt);
-    [~, hH] = plot_vehicle(xH_plt', 'model', option_H);
+    try
+        option.alpha = option.alpha*alpha_vec(cnt);
+    catch
+        option.alpha = option.alpha*alpha_vec(end);
+    end
+    [~, hH] = plot_vehicle(xH_plt', 'model', option);
 
     % Axis and title.
     if option.UI
@@ -143,11 +159,6 @@ for t = t_start:t_end
     end
     cnt = cnt + option.t_skip;
 end
-
-plot(2.0, 0.0, 'Marker', 'Pentagram', 'MarkerSize', 30,...
-    'MarkerEdgeColor', 'r', 'MarkerFaceColor', 'r')    % Robot's target
-plot(-2.0, 0.0, 'Marker', 'Pentagram', 'MarkerSize', 30,...
-    'MarkerEdgeColor', 'g', 'MarkerFaceColor', 'g')    % Human's target
 
 if ~option.keep_traj
     delete(hH)

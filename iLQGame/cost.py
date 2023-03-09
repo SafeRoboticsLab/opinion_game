@@ -273,12 +273,14 @@ class ProductStateProximityCostTwoPlayer(Cost):
     # Player 1.
     # -> Relative distance to Player 2.
     rel_dist = jsqrt((x[x1_idx] - x[x2_idx])**2 + (x[y1_idx] - x[y2_idx])**2)
-    total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
+    # total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
+    total_cost += jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2)
 
     # Player 2.
     # -> Relative distance to Player 1.
     rel_dist = jsqrt((x[x2_idx] - x[x1_idx])**2 + (x[y2_idx] - x[y1_idx])**2)
-    total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
+    # total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
+    total_cost += jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2)
 
     return total_cost
 
@@ -539,9 +541,9 @@ class ReferenceDeviationCost(Cost):
         DeviceArray: scalar value of cost (scalar)
     """
     if self._is_x:
-      return jnp.linalg.norm(x[self._dimension] - self.reference[:, k])**2
+      return jnp.linalg.norm(x[self._dimension] - self.reference)**2
     else:
-      return jnp.linalg.norm(ui[self._dimension] - self.reference[:, k])**2
+      return jnp.linalg.norm(ui[self._dimension] - self.reference)**2
 
 
 class SemiquadraticCost(Cost):
@@ -640,24 +642,19 @@ class MaxVelCostPxDependent(Cost):
         DeviceArray: scalar value of cost (scalar)
     """
 
+    def pred(x):
+      px = x[self._px_index]
+      v = x[self._v_index]
+      return (v > self._max_v) & (self._px_lb < px) & (px < self._px_ub)
+
     def true_fn(x):
-
-      def true_fn_px(x):
-        # return (x[self._v_index] - self._max_v)**2
-        return jnp.exp(x[self._v_index] - self._max_v)
-
-      def false_fn_px(x):
-        return 0.
-
-      return lax.cond(
-          self._px_lb < x[self._px_index] < self._px_ub, true_fn_px,
-          false_fn_px, x
-      )
+      return (x[self._v_index] - self._max_v)**2
+      # return jnp.exp(x[self._v_index] - self._max_v)
 
     def false_fn(x):
       return 0.
 
-    return lax.cond(x[self._v_index] > self._max_v, true_fn, false_fn, x)
+    return lax.cond(pred(x), true_fn, false_fn, x)
 
 
 class SemiquadraticPolylineCost(Cost):
