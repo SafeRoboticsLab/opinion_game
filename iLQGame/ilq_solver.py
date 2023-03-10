@@ -48,12 +48,11 @@ class ILQSolver(object):
     # in checking convergence.
     self._last_operating_point = None
     _current_x = jnp.zeros((self._dynamics._x_dim, self._horizon))
-    # _current_x = _current_x.at[:, 0].set(self._x0)
     _current_u = [
         jnp.zeros((ui_dim, self._horizon)) for ui_dim in self._dynamics._u_dims
     ]
-    self._current_operating_point = (_current_x, _current_u)
-    self._best_operating_point = (_current_x, _current_u)
+    self._current_operating_point = (_current_x, _current_u, Ps, alphas)
+    self._best_operating_point = (_current_x, _current_u, Ps, alphas)
     self._best_social_cost = 1e10
 
     # Fixed step size for the linesearch.
@@ -87,7 +86,9 @@ class ILQSolver(object):
       current_us = self._current_operating_point[1]
       current_Ps = self._Ps
 
+      # Line search based on social cost.
       total_cost_best = 1e10
+      best_alphas = self._alphas
       for alpha_scaling in self._alpha_scaling:
         current_alphas = self._alphas
         current_alphas = [
@@ -101,14 +102,8 @@ class ILQSolver(object):
         if total_cost_alpha < total_cost_best:
           xs = xs_alpha
           us_list = us_list_alpha
+          best_alphas = current_alphas
           total_cost_best = total_cost_alpha
-
-      self._last_operating_point = self._current_operating_point
-      self._current_operating_point = (xs, us_list)
-
-      if total_cost_best < self._best_social_cost:
-        self._best_operating_point = self._current_operating_point
-        self._best_social_cost = total_cost_best
 
       if self._verbose or iteration == 0:
         print("- Reference computing time: ", time.time() - tt)
@@ -132,11 +127,11 @@ class ILQSolver(object):
       lxs = [np.asarray(lxs_i) for lxs_i in lxs]
       Hxxs = [np.asarray(Hxxs_i) for Hxxs_i in Hxxs]
       Huus = [np.asarray(Huus_i) for Huus_i in Huus]
-      Ps, alphas = self._solve_lq_game(As, Bs_list, Hxxs, lxs, Huus)
+      Ps, alphas, Zs, zetas = self._solve_lq_game(As, Bs_list, Hxxs, lxs, Huus)
       if self._verbose or iteration == 0:
         print("- Forward & backward pass time: ", time.time() - tt)
 
-      # Accumulate total costs for both players.
+      # Accumulates total costs for both players.
       total_costs = [jnp.sum(costis) for costis in costs]
       print(
           "Iteration", iteration, "| Total cost for all players: ",
@@ -144,47 +139,23 @@ class ILQSolver(object):
           time.time() - t_start, "\n"
       )
 
-      # Visualization.
-      if self._visualizer is not None:
-        traj = {"xs": np.asarray(xs)}
-        for ii in range(self._num_players):
-          traj["u%ds" % (ii+1)] = np.asarray(us_list[ii])
-
-        self._visualizer.add_trajectory(iteration, traj)
-        #                self._visualizer.plot_controls(1)
-        #                plt.pause(0.01)
-        #                plt.clf()
-        #                self._visualizer.plot_controls(2)
-        #                plt.pause(0.01)
-        #                plt.clf()
-        self._visualizer.plot()
-        plt.pause(0.0001)
-        plt.clf()
-
-      # Log everything.
-      if self._logger is not None:
-        self._logger.log("xs", np.asarray(xs))
-        self._logger.log("us", np.asarray(us_list))
-        self._logger.log("total_costs", total_costs)
-        self._logger.dump()
-
-      # Update the member variables.
+      # Update policy parameters.
       self._Ps = Ps
       self._alphas = alphas
 
-      # print("Avg. car1_alphas: ", jnp.mean(alphas[0]))
-      # print("Avg. car2_alphas: ", jnp.mean(alphas[1]))
-      # print()
+      # Updates the operating points.
+      self._last_operating_point = self._current_operating_point
+      self._current_operating_point = (
+          xs, us_list, current_Ps, best_alphas, Zs, zetas
+      )
 
-      # (5) Linesearch.
-      self._linesearch()
+      if total_cost_best < self._best_social_cost:
+        self._best_operating_point = self._current_operating_point
+        self._best_social_cost = total_cost_best
+
       iteration += 1
 
     plt.close()
-
-  def _linesearch(self):
-    """ Linesearch for both players separately. """
-    pass
 
   # ------- TODO: CHANGE TO COST DIFFERENCE -------
   def _is_converged(self):
@@ -327,7 +298,7 @@ class ILQSolver(object):
   def _solve_lq_game(
       self, As: np.ndarray, Bs_list: list, Qs_list: list, ls_list: list,
       Rs_list: list
-  ) -> Tuple[list, list]:
+  ) -> Tuple[list, list, list, list]:
     """
     Solves a time-varying, finite horizon LQ game (finds closed-loop Nash
     feedback strategies for both players).
@@ -344,6 +315,8 @@ class ILQSolver(object):
     Returns:
         [np.ndarray]: Ps_list
         [np.ndarray]: alphas_list
+        [np.ndarray]: Zs
+        [np.ndarray]: zetas
     """
 
     # Unpack horizon and number of players.
@@ -397,8 +370,8 @@ class ILQSolver(object):
 
       Y = np.concatenate([B[ii].T @ Z[ii] @ A for ii in range(num_players)])
 
-      # P, _, _, _ = np.linalg.lstsq(a=S, b=Y, rcond=None)
-      P = np.linalg.pinv(S) @ Y
+      P, _, _, _ = np.linalg.lstsq(a=S, b=Y, rcond=None)
+      # P = np.linalg.pinv(S) @ Y
 
       P_split = [[] for _ in range(num_players)]
       for ii in range(num_players):
@@ -436,7 +409,7 @@ class ILQSolver(object):
       for ii in range(num_players):
         zetas[ii][:, k] = F.T @ (zeta[ii] + Z[ii] @ beta) + l[
             ii] + P_split[ii].T @ R[ii] @ alpha_split[ii]
-    return Ps, alphas
+    return Ps, alphas, Zs, zetas
 
   def plot_controls(self, player_id, fig_width=15., fig_length=8.):
     """

@@ -4,6 +4,10 @@ Util functions.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
+
+TODO:
+  - Remove unused class
+  - Rewrite comments
 """
 
 from distutils.log import error
@@ -320,9 +324,9 @@ def simulate_opinion_ctrl(
 
 
 def wrapPi(angle):
-    # makes a number -pi to pi
-    while angle <= -np.pi:
-        angle += 2*np.pi
-    while angle > np.pi:
-        angle -= 2*np.pi
-    return angle
+  # makes a number -pi to pi
+  while angle <= -np.pi:
+    angle += 2 * np.pi
+  while angle > np.pi:
+    angle -= 2 * np.pi
+  return angle

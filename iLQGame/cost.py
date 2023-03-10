@@ -4,6 +4,9 @@ Game costs.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
+
+TODO:
+  - Rewrite comments
 """
 
 import matplotlib.pyplot as plt
@@ -16,8 +19,8 @@ import jax.numpy as jnp
 
 class Cost(object):
   """
-  Base class for all cost functions. Structured as a functor
-  so that it can be treated like a function, but support inheritance.
+  Base class for all cost functions. Structured as a functor so that it can be
+  treated like a function, but support inheritance.
   """
 
   def __init__(self, name="", horizon=None, x_dim=None, ui_dim=None):

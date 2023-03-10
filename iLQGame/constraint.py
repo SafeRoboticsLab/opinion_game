@@ -4,6 +4,9 @@ Constraints.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
+
+TODO:
+  - Rewrite comments
 """
 
 import jax.numpy as jnp
