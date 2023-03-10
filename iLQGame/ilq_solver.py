@@ -27,33 +27,12 @@ class ILQSolver(object):
 
   def __init__(
       self, dynamics, player_costs, x0, Ps, alphas, alpha_scaling=0.05,
-      max_iter=100, reference_deviation_weight=None, logger=None,
-      visualizer=None, u_constraints=None, verbose=False
+      max_iter=100, logger=None, visualizer=None, u_constraints=None,
+      verbose=False
   ):
     """
         Initialize from dynamics, player costs, current state, and initial
         guesses for control strategies for both players.
-
-        :param dynamics: two-player dynamical system
-        :type dynamics: TwoPlayerDynamicalSystem
-        :param player_costs: list of cost functions for all players
-        :type player_costs: [PlayerCost]
-        :param x0: initial state
-        :type x0: np.array
-        :param Ps: list of lists of feedback gains (1 list per player)
-        :type Ps: [[np.array]]
-        :param alphas: list of lists of feedforward terms (1 list per player)
-        :type alphas: [[np.array]]
-        :param alpha_scaling: step size on the alpha
-        :type alpha_scaling: float
-        :param reference_deviation_weight: weight on reference deviation cost
-        :type reference_deviation_weight: None or float
-        :param logger: logging utility
-        :type logger: Logger
-        :param visualizer: optional visualizer
-        :type visualizer: Visualizer
-        :param u_constraints: list of constraints on controls
-        :type u_constraints: [Constraint]
         """
     self._dynamics = dynamics
     self._player_costs = player_costs
@@ -79,9 +58,6 @@ class ILQSolver(object):
 
     # Fixed step size for the linesearch.
     self._alpha_scaling = alpha_scaling
-
-    # Reference deviation cost weight.
-    self._reference_deviation_weight = reference_deviation_weight
 
     # Set up visualizer.
     self._visualizer = visualizer
@@ -413,6 +389,7 @@ class ILQSolver(object):
       for ii in range(num_players):
         Sis = [[] for _ in range(num_players)]
         for jj in range(num_players):
+          # Sis[jj] = B[ii].T @ np.nan_to_num(Z[ii]) @ B[jj]
           Sis[jj] = B[ii].T @ Z[ii] @ B[jj]
         Sis[ii] += R[ii]
         S_rows[ii] = np.concatenate(Sis, axis=1)

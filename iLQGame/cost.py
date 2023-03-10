@@ -237,14 +237,12 @@ class ProductStateProximityCostTwoPlayer(Cost):
       ``` sum_{i \ne j} min(distance(i, j) - max_distance, 0)^2 ```
     for all players i, j.
 
-    Initialize with dimension to add cost to and threshold BELOW which
-    to impose quadratic cost.
-
     For jit compatibility, number of players is hardcoded to 2 to avoid loops.
     """
     self._position_indices = position_indices
     self._max_distance = max_distance
     self._num_players = len(position_indices)
+    self._max_exp_bound = 1e5
     super(ProductStateProximityCostTwoPlayer,
           self).__init__(name, horizon, x_dim, ui_dim)
 
@@ -274,13 +272,19 @@ class ProductStateProximityCostTwoPlayer(Cost):
     # -> Relative distance to Player 2.
     rel_dist = jsqrt((x[x1_idx] - x[x2_idx])**2 + (x[y1_idx] - x[y2_idx])**2)
     # total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
-    total_cost += jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2)
+    total_cost += jnp.minimum(
+        jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2),
+        self._max_exp_bound
+    )
 
     # Player 2.
     # -> Relative distance to Player 1.
     rel_dist = jsqrt((x[x2_idx] - x[x1_idx])**2 + (x[y2_idx] - x[y1_idx])**2)
     # total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
-    total_cost += jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2)
+    total_cost += jnp.minimum(
+        jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2),
+        self._max_exp_bound
+    )
 
     return total_cost
 
@@ -358,34 +362,21 @@ class ProductStateProximityCostThreePlayer(Cost):
     return total_cost
 
 
-class ProximityCostInfMaxDist(Cost):
+class ProximityCost(Cost):
 
   def __init__(
-      self, position_indices, point, apply_after_time=-1, name="",
-      horizon=None, x_dim=None, ui_dim=None, plot_color="r"
+      self, position_indices, point_px, point_py, max_distance, name="",
+      horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Proximity cost, derived from Cost base class. Implements a cost function
     that depends only on state and penalizes -min(distance, max_distance)^2.
-
-    Initialize with dimension to add cost to and threshold BELOW which
-    to impose quadratic cost. Above the threshold, we use a very light
-    quadratic cost. The overall cost is continuous.
-
-    Comparing to ProximityCost, max_distance is set to inf.
-
-    :param position_indices: indices of input corresponding to (x, y)
-    :type position_indices: (uint, uint)
-    :param point: point from which to compute proximity
-    :type point: Point
-    :param apply_after_time: only apply proximity time after this time step
-    :type apply_after_time: int
     """
     self._x_index, self._y_index = position_indices
-    self._point = point
-    self._apply_after_time = apply_after_time
-    self.plot_color = plot_color
-    super(ProximityCostInfMaxDist, self).__init__(name, horizon, x_dim, ui_dim)
+    self._point_px = point_px
+    self._point_py = point_py
+    self._max_distance = max_distance
+    super(ProximityCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
   def get_cost(
@@ -403,24 +394,10 @@ class ProximityCostInfMaxDist(Cost):
         DeviceArray: scalar value of cost (scalar)
     """
 
-    def true_fn(x, k):
-      return 0.
-
-    def false_fn(x, k):
-      dx = x[self._x_index] - self._point.x
-      dy = x[self._y_index] - self._point.y
-      return -(dx*dx + dy*dy)
-
-    return lax.cond(k < self._apply_after_time, true_fn, false_fn, x, k)
-
-  def render(self, ax=None):
-    """ Render this obstacle on the given axes. """
-    radius = 0.1
-
-    circle = plt.Circle((self._point.x, self._point.y), radius,
-                        color=self.plot_color, fill=True, alpha=0.75)
-    ax.add_artist(circle)
-    ax.text(self._point.x + 1.25, self._point.y + 1.25, "", fontsize=10)
+    dx = x[self._x_index] - self._point_px
+    dy = x[self._y_index] - self._point_py
+    rel_dist = jnp.sqrt(dx**2 + dy**2)
+    return jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2)
 
 
 class QuadraticCost(Cost):
@@ -541,9 +518,9 @@ class ReferenceDeviationCost(Cost):
         DeviceArray: scalar value of cost (scalar)
     """
     if self._is_x:
-      return jnp.linalg.norm(x[self._dimension] - self.reference)**2
+      return (x[self._dimension] - self.reference)**2
     else:
-      return jnp.linalg.norm(ui[self._dimension] - self.reference)**2
+      return (ui[self._dimension] - self.reference)**2
 
 
 class SemiquadraticCost(Cost):
@@ -595,7 +572,8 @@ class SemiquadraticCost(Cost):
       z = ui
 
     def true_fn(z):
-      return (z[self._dimension] - self._threshold)**2
+      # return (z[self._dimension] - self._threshold)**2
+      return jnp.exp((z[self._dimension] - self._threshold)**2)
 
     def false_fn(z):
       return 0.
@@ -624,6 +602,7 @@ class MaxVelCostPxDependent(Cost):
     self._max_v = max_v
     self._px_lb = px_lb
     self._px_ub = px_ub
+    self._max_exp_bound = 1e3
     super(MaxVelCostPxDependent, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
@@ -648,8 +627,10 @@ class MaxVelCostPxDependent(Cost):
       return (v > self._max_v) & (self._px_lb < px) & (px < self._px_ub)
 
     def true_fn(x):
-      return (x[self._v_index] - self._max_v)**2
-      # return jnp.exp(x[self._v_index] - self._max_v)
+      # return (x[self._v_index] - self._max_v)**2
+      return jnp.minimum(
+          jnp.exp((x[self._v_index] - self._max_v)**2), self._max_exp_bound
+      )
 
     def false_fn(x):
       return 0.

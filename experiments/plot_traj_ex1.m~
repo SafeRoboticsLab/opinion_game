@@ -1,7 +1,7 @@
 clear; close all; clc
 
 % Loads data.
-xs = double(readNPY('two_car/two_car_xs.npy'));
+xs = double(readNPY('two_car/two_car_22_xs.npy'));
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
 
@@ -76,7 +76,7 @@ end
 hold on
 daspect([1,1,1])
 xlimSpan = [-5, 100];
-ylimSpan = [-5.5, 12];
+ylimSpan = [-6, 13];
 xlim(xlimSpan)
 ylim(ylimSpan)
 
@@ -89,20 +89,53 @@ rd_center = (rd_bd_min+rd_bd_max)/2;
 grey_rgb = [150,150,150]/255;
 white_rgb = [255,255,255]/255;
 
+toll_start = 40;
+toll_end = 60;
+toll_center = (toll_start+toll_end)/2;
+
 %   -> Road color
 fill([road_start, road_start, road_end, road_end],...
      [ylimSpan(1), ylimSpan(2), ylimSpan(2), ylimSpan(1)], grey_rgb);
 %   -> Road boundaries
 plot(linspace(road_start, road_end, 2),...
     linspace(rd_bd_min, rd_bd_min, 2),...
-    '-', 'Color', white_rgb, 'LineWidth', 5)
+    '-', 'Color', white_rgb, 'LineWidth', 3)
 plot(linspace(road_start, road_end, 2),...
     linspace(rd_bd_max, rd_bd_max, 2),...
-    '-', 'Color', white_rgb, 'LineWidth', 5)
+    '-', 'Color', white_rgb, 'LineWidth', 3)
 %   -> Center line of the road
-plot(linspace(road_start, road_end, 2),...
+plot(linspace(road_start, toll_start, 2),...
     linspace(rd_center, rd_center, 2),...
-    '--', 'Color', white_rgb, 'LineWidth', 8)
+    '--', 'Color', white_rgb, 'LineWidth', 5)
+plot(linspace(toll_end, road_end, 2),...
+    linspace(rd_center, rd_center, 2),...
+    '--', 'Color', white_rgb, 'LineWidth', 5)
+
+% Plots toll stations.
+option_toll = option;
+option_toll.length = 30;
+
+% TOLL 1
+option_toll_1 = option_toll;
+option_toll_1.centre = [2000; 400];
+[option_toll_1.image, ~, option_toll_1.alpha] =...
+        imread('two_car/car_figures/toll_1.png');
+plot_vehicle([toll_center; rd_bd_max; 0]', 'model', option_toll_1);
+
+% TOLL 2
+option_toll_2 = option_toll;
+option_toll_2.centre = [2000; -65];
+[option_toll_2.image, ~, option_toll_2.alpha] =...
+        imread('two_car/car_figures/toll_2.png');
+plot_vehicle([toll_center; 0; 0]', 'model', option_toll_2);
+
+% TOLL 0
+option_toll_0 = option_toll;
+option_toll_0.centre = [2000; 180];
+[option_toll_0.image, ~, option_toll_0.alpha] =...
+        imread('two_car/car_figures/toll_0.png');
+plot_vehicle([toll_center; rd_bd_min; 0]', 'model', option_toll_0);
+
 
 % Plots agent movements.
 cnt = 1;
