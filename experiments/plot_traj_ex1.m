@@ -1,14 +1,18 @@
 clear; close all; clc
 
 % Loads data.
-xs = double(readNPY('two_car/two_car_12_xs.npy'));
+game_param = '11';
+xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
+zs = double(readNPY(strcat('two_car/two_car_', game_param, '_opn.npy')));
+Hs = double(readNPY(strcat('two_car/two_car_', game_param, '_Hs.npy')));
+
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
 
 % Sets parameters.
 option.keep_traj  = true;
-option.is_fading  = true;
-option.t_skip     = 5;
+option.is_fading  = false;
+option.t_skip     = 10;
 option.N_interp   = 1;
 option.t_start    = [];
 option.t_end      = [];
@@ -23,7 +27,7 @@ option.rotation = 0;
 option.centre = [348; 203];
 
 % Real world length for scaling
-option.length = 6;
+option.length = 5;
 
 % Interpolates data.
 if option.N_interp == 1
@@ -141,7 +145,7 @@ plot_vehicle([toll_center; rd_bd_min; 0]', 'model', option_toll_0);
 cnt = 1;
 for t = t_start:t_end
 
-    if mod(t-t_start, option.t_skip)~=0 && t~=t_end 
+    if mod(t-t_start, option.t_skip)~=0 %&& t~=t_end 
         continue
     end
 
