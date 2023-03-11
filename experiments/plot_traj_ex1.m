@@ -1,7 +1,7 @@
 clear; close all; clc
 
 % Loads data.
-xs = double(readNPY('two_car/two_car_22_xs.npy'));
+xs = double(readNPY('two_car/two_car_12_xs.npy'));
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
 
