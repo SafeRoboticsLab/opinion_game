@@ -74,10 +74,12 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     self._num_att_P1 = len(self._att_indices_P1)
     self._num_att_P2 = len(self._att_indices_P2)
 
-    super(NonlinearOpinionDynamicsTwoPlayer, self).__init__(
+    self._x_dim = (
         self._num_opn_P1 + self._num_opn_P2 + self._num_att_P1
-        + self._num_att_P2, 0, T
+        + self._num_att_P2
     )
+
+    super(NonlinearOpinionDynamicsTwoPlayer, self).__init__(self._x_dim, 0, T)
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(

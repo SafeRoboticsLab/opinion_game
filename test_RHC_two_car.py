@@ -18,6 +18,8 @@ from iLQGame.multiplayer_dynamical_system import *
 from iLQGame.ilq_solver import ILQSolver
 from iLQGame.player_cost import PlayerCost
 
+from opinion_dynamics.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
+
 # Loads the config.
 config = load_config("example_two_car.yaml")
 
@@ -34,8 +36,28 @@ car_H = Car4D(l=3.0, T=TIME_RES)
 car_R_xyth_indices_in_product_state = (0, 1, 2, 3)
 car_H_xyth_indices_in_product_state = (4, 5, 6, 7)
 
-# Creates joint system dynamics.
+# Creates joint physical system dynamics.
 jnt_sys = ProductMultiPlayerDynamicalSystem([car_R, car_H], T=TIME_RES)
+
+# Defines game-induced NOD.
+z_bias = config.Z_BIAS * np.ones((2,))
+GiNOD = NonlinearOpinionDynamicsTwoPlayer(
+    x_indices_P1=np.array((0, 1, 2, 3)),
+    x_indices_P2=np.array((4, 5, 6, 7)),
+    z_indices_P1=np.array((8, 9)),
+    z_indices_P2=np.array((10, 11)),
+    att_indices_P1=np.array((12,)),
+    att_indices_P2=np.array((13,)),
+    z_P1_bias=z_bias,
+    z_P2_bias=z_bias,
+    T=TIME_RES,
+    damping_opn=0.0,
+    damping_att=1.0,
+    rho=0.7,
+)
+
+# Defines the OPS (joint opinion-physical state system)
+jnt_sys.add_opinion_dyn(GiNOD)
 x_dim = jnt_sys._x_dim
 
 # Initializes states and iLQ policies.
@@ -51,10 +73,11 @@ car_H_theta0 = 0.0
 car_H_v0 = 5.0
 car_H_x0 = jnp.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])
 
-jnt_x0 = jnp.concatenate([car_R_x0, car_H_x0], axis=0)
+z0 = np.zeros((6,))
+
+jnt_x0 = jnp.concatenate([car_R_x0, car_H_x0, z0], axis=0)
 
 # Defines costs.
-
 #   -> Car R
 car_R_px_index = 0
 car_R_py_index = 1
@@ -187,7 +210,6 @@ car_R_cost = PlayerCost()
 car_R_cost.add_cost(car_R_goal_psi_cost, "x", 1.0)
 car_R_cost.add_cost(car_R_goal_vel_cost, "x", 1.0)
 
-# car_R_cost.add_cost(car_R_maxv_cost, "x", 10.0)
 car_R_cost.add_cost(car_R_lower_road_cost, "x", 50.0)
 car_R_cost.add_cost(car_R_upper_road_cost, "x", 50.0)
 car_R_cost.add_cost(car_R_min_vel_cost, "x", 50.0)
@@ -205,7 +227,6 @@ car_H_cost = PlayerCost()
 car_H_cost.add_cost(car_H_goal_psi_cost, "x", 1.0)
 car_H_cost.add_cost(car_H_goal_vel_cost, "x", 1.0)
 
-# car_H_cost.add_cost(car_H_maxv_cost, "x", 10.0)
 car_H_cost.add_cost(car_H_lower_road_cost, "x", 50.0)
 car_H_cost.add_cost(car_H_upper_road_cost, "x", 50.0)
 car_H_cost.add_cost(car_H_min_vel_cost, "x", 50.0)
@@ -238,7 +259,7 @@ while ts_px < config.TOLL_STATION_PX_UB:
 
   ts_px += config.TOLL_STATION_WIDTH
 
-# Input constraints (for clipping).
+# Input constraints.
 a_min = config.A_MIN
 a_max = config.A_MAX
 w_min = config.W_MIN
@@ -250,7 +271,7 @@ u_constraints_car_H = BoxConstraint(
     lower=jnp.hstack((a_min, w_min)), upper=jnp.hstack((a_max, w_max))
 )
 
-# Sets up intent-dependent cost
+# Sets up opinion-weighted cost
 for car_R_opn in [1, 2]:
   for car_H_opn in [1, 2]:
 
@@ -272,21 +293,6 @@ for car_R_opn in [1, 2]:
       car_H_goal_py = config.GOAL_PY_1
     elif car_H_opn == 2:
       car_H_goal_py = config.GOAL_PY_2
-
-    # Tracks the target lane (y-position).
-    car_R_goal_py_cost = ReferenceDeviationCost(
-        reference=car_R_goal_py, dimension=car_R_py_index, is_x=True,
-        name="car_R_goal_py", horizon=HORIZON_STEPS, x_dim=x_dim,
-        ui_dim=car_R._u_dim
-    )
-    car_H_goal_py_cost = ReferenceDeviationCost(
-        reference=car_H_goal_py, dimension=car_H_py_index, is_x=True,
-        name="car_H_goal_py", horizon=HORIZON_STEPS, x_dim=x_dim,
-        ui_dim=car_H._u_dim
-    )
-
-    car_R_cost_subgame.add_cost(car_R_goal_py_cost, "x", 50.0)
-    car_H_cost_subgame.add_cost(car_H_goal_py_cost, "x", 50.0)
 
     # Sets up ILQSolver.
     alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)

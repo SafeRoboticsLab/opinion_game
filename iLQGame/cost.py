@@ -529,7 +529,7 @@ class OpnWeightedReferenceDeviationCost(Cost):
 
   def __init__(
       self, reference, dimension=None, is_x=False, name="", horizon=None,
-      x_dim=None, ui_dim=None, z_dim=None, z_idx=None
+      x_dim=None, ui_dim=None
   ):
     """
     Opinion-weighted reference trajectory following cost.
@@ -539,22 +539,13 @@ class OpnWeightedReferenceDeviationCost(Cost):
     self.reference = reference
     self._dimension = dimension
     self._is_x = is_x
-    self._z = jnp.zeros((z_dim,))
-    self._z_idx = z_idx
-    super(ReferenceDeviationCost, self).__init__(name, horizon, x_dim, ui_dim)
-
-  def update_opinion(self, z):
-    """
-    Updates the opinion state.
-
-    Args:
-        z (DeviceArray): opinion state.
-    """
-    self._z = z
+    super(OpnWeightedReferenceDeviationCost,
+          self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
   def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
+      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0,
+      zi: DeviceArray = None, idx: int = None
   ) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
@@ -563,6 +554,8 @@ class OpnWeightedReferenceDeviationCost(Cost):
         x (DeviceArray, optional): concatenated state of all subsystems (nx,)
         ui (DeviceArray, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
+        z (DeviceArray, optional): opinion of the subsystem (nzi,)
+        idx (int, optional): opinion index
 
     Returns:
         DeviceArray: scalar value of cost (scalar)
@@ -570,7 +563,7 @@ class OpnWeightedReferenceDeviationCost(Cost):
 
     print("self._z = ", self._z)
 
-    weight_z = softmax(self._z, self._z_idx)
+    weight_z = softmax(zi, idx)
 
     if self._is_x:
       return weight_z * (x[self._dimension] - self.reference)**2
