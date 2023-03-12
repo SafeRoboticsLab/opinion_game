@@ -28,7 +28,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       self, x_indices_P1, x_indices_P2, z_indices_P1, z_indices_P2,
       att_indices_P1, att_indices_P2, Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom,
       znom_P1, znom_P2, z_P1_bias, z_P2_bias, damping_opn=0.0, damping_att=0.0,
-      T=0.1
+      rho=1.0, T=0.1
   ):
     """
     Initializer.
@@ -59,10 +59,12 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         z_P2_bias (DeviceArray): (nz,) P2 opinion state bias
         damping_opn (float, optional): z damping parameter. Defaults to 0.0.
         damping_att (float, optional): att damping parameter. Defaults to 0.0.
+        rho (float, optional): att scaling parameter. Defaults to 1.0.
         T (float, optional): time interval. Defaults to 0.1.
     """
     assert damping_opn >= 0
     assert damping_att >= 0
+    assert rho >= 0
 
     self._x_indices_P1 = x_indices_P1
     self._x_indices_P2 = x_indices_P2
@@ -77,9 +79,13 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     self._x_ph_nom = x_ph_nom
     self._znom_P1 = znom_P1
     self._znom_P2 = znom_P2
-    self._damping_opn = damping_opn
     self._z_P1_bias = z_P1_bias
     self._z_P2_bias = z_P2_bias
+    self._damping_opn = damping_opn
+    self._damping_att = damping_att
+    self._rho = rho
+
+    self._eps = 1e-3
 
     # Players' number of options
     self._num_opn_P1 = len(self._z_indices_P1)
@@ -144,13 +150,73 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
-    def compute_PoI(
-        zi: DeviceArray, x_ph: DeviceArray, Zi_sub: DeviceArray
-    ) -> DeviceArray:
+    # @jit
+    def compute_PoI_P1(z1: DeviceArray, x_ph: DeviceArray) -> DeviceArray:
       """
-      Computes the Price of Indecision (PoI).
+      Computes the Price of Indecision (PoI) for P1.
       """
+      ratios = jnp.zeros((self._num_opn_P2,))
 
+      # Outer loop over P2's (opponent) options.
+      for l2 in range(self._num_opn_P2):
+        V_subs = jnp.zeros((self._num_opn_P1,))
+
+        # Inner loop over P1's (ego) options.
+        for l1 in range(self._num_opn_P1):
+          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
+          Z_sub = self._Z_P1[:, :, l1, l2]
+          zeta_sub = self._zeta_P1[:, l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          V_subs = V_subs.at[l1].set(V_sub)
+
+        # Normalize to avoid large numbers.
+        V_subs = jax.nn.softmax(jax.nn.standardize(V_subs))
+
+        numer = 0.
+        for l1 in range(self._num_opn_P1):
+          numer += softmax(z1, l1) * V_subs[l1]
+
+        denom = jnp.min(V_subs)
+
+        ratio = (numer + self._eps) / (denom + self._eps)
+        ratios = ratios.at[l2].set(ratio)
+
+      PoI = jnp.max(ratios)
+      return PoI
+
+    # @jit
+    def compute_PoI_P2(z2: DeviceArray, x_ph: DeviceArray) -> DeviceArray:
+      """
+      Computes the Price of Indecision (PoI) for P2.
+      """
+      ratios = jnp.zeros((self._num_opn_P1,))
+
+      # Outer loop over P1's (opponent) options.
+      for l1 in range(self._num_opn_P1):
+        numer = 0.
+        V_subs = jnp.zeros((self._num_opn_P2,))
+
+        # Inner loop over P2's (ego) options.
+        for l2 in range(self._num_opn_P2):
+          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
+          Z_sub = self._Z_P1[:, :, l1, l2]
+          zeta_sub = self._zeta_P1[:, l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          V_subs = V_subs.at[l2].set(V_sub)
+
+        # Normalize to avoid large numbers.
+        V_subs = jax.nn.softmax(jax.nn.standardize(V_subs))
+
+        numer = 0.
+        for l2 in range(self._num_opn_P2):
+          numer += softmax(z2, l2) * V_subs[l2]
+
+        denom = jnp.min(V_subs)
+
+        ratio = (numer + self._eps) / (denom + self._eps)
+        ratios = ratios.at[l1].set(ratio)
+
+      PoI = jnp.max(ratios)
       return PoI
 
     # State variables.
@@ -193,7 +259,12 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     z_dot = -D @ z + jnp.hstack((H1z, H2z))
 
-    # Computes attention time derivative.
+    # Computes the attention time derivative.
+    PoI_1 = compute_PoI_P1(z1, x_ph)
+    PoI_2 = compute_PoI_P2(z2, x_ph)
+
+    att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1)
+    att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1)
 
     return jnp.hstack((z_dot, att1_dot, att2_dot))
 
