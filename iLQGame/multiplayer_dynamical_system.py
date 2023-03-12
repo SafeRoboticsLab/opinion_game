@@ -135,6 +135,15 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
       )
       self._LMx[i] = jnp.asarray(self._LMx[i])
 
+    # Creates lifting matrices LMu_i for subsystem i such that LMu_i @ u = ui.
+    u_dims = self.u_dims
+    u_dim = sum(u_dims)
+    _split_index = np.hstack((0, np.cumsum(np.asarray(u_dims))))
+    self._LMu = [np.zeros((ui_dim, u_dim)) for ui_dim in u_dims]
+    for i in range(self._num_players):
+      self._LMu[i][:, _split_index[i]:_split_index[i + 1]] = np.eye(u_dims[i])
+      self._LMu[i] = jnp.asarray(self._LMu[i])
+
   def add_opinion_dyn(self, opn_dyns):
     """
     Append the physical subsystems with opinion dynamics, which do not have

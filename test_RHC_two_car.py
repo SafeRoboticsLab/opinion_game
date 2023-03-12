@@ -272,42 +272,22 @@ u_constraints_car_H = BoxConstraint(
 )
 
 # Sets up opinion-weighted cost
-for car_R_opn in [1, 2]:
-  for car_H_opn in [1, 2]:
 
-    car_R_cost_subgame = deepcopy(car_R_cost)
-    car_H_cost_subgame = deepcopy(car_H_cost)
 
-    car_R_Ps = jnp.zeros((car_R._u_dim, jnt_sys._x_dim, HORIZON_STEPS))
-    car_H_Ps = jnp.zeros((car_H._u_dim, jnt_sys._x_dim, HORIZON_STEPS))
+# Sets up ILQSolver.
+alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)
+# alpha_scaling = np.logspace(-2, -0.04, config.ALPHA_SCALING_NUM)
+solver = ILQSolver(
+    jnt_sys,
+    [car_R_cost_subgame, car_H_cost_subgame],
+    jnt_x0,
+    [car_R_Ps, car_H_Ps],
+    [car_R_alphas, car_H_alphas],
+    alpha_scaling,
+    config.MAX_ITER,
+    u_constraints=[u_constraints_car_R, u_constraints_car_H],
+    verbose=config.VERBOSE,
+)
 
-    car_R_alphas = jnp.zeros((car_R._u_dim, HORIZON_STEPS))
-    car_H_alphas = jnp.zeros((car_H._u_dim, HORIZON_STEPS))
-
-    if car_R_opn == 1:
-      car_R_goal_py = config.GOAL_PY_1
-    elif car_R_opn == 2:
-      car_R_goal_py = config.GOAL_PY_2
-
-    if car_H_opn == 1:
-      car_H_goal_py = config.GOAL_PY_1
-    elif car_H_opn == 2:
-      car_H_goal_py = config.GOAL_PY_2
-
-    # Sets up ILQSolver.
-    alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)
-    # alpha_scaling = np.logspace(-2, -0.04, config.ALPHA_SCALING_NUM)
-    solver = ILQSolver(
-        jnt_sys,
-        [car_R_cost_subgame, car_H_cost_subgame],
-        jnt_x0,
-        [car_R_Ps, car_H_Ps],
-        [car_R_alphas, car_H_alphas],
-        alpha_scaling,
-        config.MAX_ITER,
-        u_constraints=[u_constraints_car_R, u_constraints_car_H],
-        verbose=config.VERBOSE,
-    )
-
-    # Solves subgames.
-    solver.run()
+# Solves subgames.
+solver.run()

@@ -68,8 +68,8 @@ z = np.zeros((6, N + 1))
 Hs = np.zeros((4, 4, N))
 PoI = np.zeros((2, N))
 
-car_R_opn = 1
-car_H_opn = 1
+car_R_opn = 2
+car_H_opn = 2
 
 z_bias = 1e-3 * np.ones((2,))
 

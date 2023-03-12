@@ -265,13 +265,17 @@ for car_R_opn in [1, 2]:
 
     if car_R_opn == 1:
       car_R_goal_py = config.GOAL_PY_1
+      car_R_goal_weight = config.GOAL_W_P1_1
     elif car_R_opn == 2:
       car_R_goal_py = config.GOAL_PY_2
+      car_R_goal_weight = config.GOAL_W_P1_2
 
     if car_H_opn == 1:
       car_H_goal_py = config.GOAL_PY_1
+      car_H_goal_weight = config.GOAL_W_P2_1
     elif car_H_opn == 2:
       car_H_goal_py = config.GOAL_PY_2
+      car_H_goal_weight = config.GOAL_W_P2_2
 
     # Tracks the target lane (y-position).
     car_R_goal_py_cost = ReferenceDeviationCost(
@@ -285,8 +289,8 @@ for car_R_opn in [1, 2]:
         ui_dim=car_H._u_dim
     )
 
-    car_R_cost_subgame.add_cost(car_R_goal_py_cost, "x", 50.0)
-    car_H_cost_subgame.add_cost(car_H_goal_py_cost, "x", 50.0)
+    car_R_cost_subgame.add_cost(car_R_goal_py_cost, "x", car_R_goal_weight)
+    car_H_cost_subgame.add_cost(car_H_goal_py_cost, "x", car_H_goal_weight)
 
     # Sets up ILQSolver.
     alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)
