@@ -18,7 +18,7 @@ from iLQGame.multiplayer_dynamical_system import *
 from iLQGame.ilq_solver import ILQSolver
 from iLQGame.player_cost import PlayerCost
 
-from NOD.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
+from opinion_dynamics.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
 
 # Loads the config.
 config = load_config("example_two_car.yaml")
@@ -104,9 +104,9 @@ for k in range(N):
       z_P1_bias=z_bias,
       z_P2_bias=z_bias,
       T=TIME_RES,
-      rho=0.7,
       damping_opn=0.0,
       damping_att=1.0,
+      rho=0.7,
   )
 
   x_joint_k = np.hstack((xnom_k[:, car_R_opn - 1, car_H_opn - 1], z[:, k]))

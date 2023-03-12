@@ -6,7 +6,6 @@ Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil)
 
 TODO:
-  - Remove logger and visualizer
   - Rewrite comments
 """
 
@@ -27,8 +26,7 @@ class ILQSolver(object):
 
   def __init__(
       self, dynamics, player_costs, x0, Ps, alphas, alpha_scaling=0.05,
-      max_iter=100, logger=None, visualizer=None, u_constraints=None,
-      verbose=False
+      max_iter=100, u_constraints=None, verbose=False
   ):
     """
         Initialize from dynamics, player costs, current state, and initial
@@ -54,40 +52,32 @@ class ILQSolver(object):
     self._current_operating_point = (_current_x, _current_u, Ps, alphas)
     self._best_operating_point = (_current_x, _current_u, Ps, alphas)
     self._best_social_cost = 1e10
+    self._current_social_cost = 1e10
+    self._last_social_cost = None
 
     # Fixed step size for the linesearch.
     self._alpha_scaling = alpha_scaling
 
-    # Set up visualizer.
-    self._visualizer = visualizer
-    self._logger = logger
-
-    # Log some of the paramters.
-    if self._logger is not None:
-      self._logger.log("alpha_scaling", self._alpha_scaling)
-      self._logger.log("horizon", self._horizon)
-      self._logger.log("x0", self._x0)
-
     self._verbose = verbose
 
   def run(self):
-    """ Run the algorithm for the specified parameters. """
-
+    """
+    Runs the iLQ algorithm.
+    """
     iteration = 0
 
-    # while not self._is_converged():
-    while iteration <= self._max_iter:
+    while (iteration <= self._max_iter):  #and (not self._is_converged_cost()):
 
       t_start = time.time()
 
-      # (1) Compute current operating point and update last one.
+      # Computes the current operating point and performs line search.
       tt = time.time()
       current_xs = self._current_operating_point[0]
       current_us = self._current_operating_point[1]
       current_Ps = self._Ps
 
       # Line search based on social cost.
-      total_cost_best = 1e10
+      total_cost_best_ls = 1e10
       best_alphas = self._alphas
       for alpha_scaling in self._alpha_scaling:
         current_alphas = self._alphas
@@ -99,28 +89,28 @@ class ILQSolver(object):
         )
         total_cost_alpha = sum([jnp.sum(costis) for costis in costs_alpha])
 
-        if total_cost_alpha < total_cost_best:
+        if total_cost_alpha < total_cost_best_ls:
           xs = xs_alpha
           us_list = us_list_alpha
           best_alphas = current_alphas
-          total_cost_best = total_cost_alpha
+          total_cost_best_ls = total_cost_alpha
 
       if self._verbose or iteration == 0:
         print("- Reference computing time: ", time.time() - tt)
 
-      # (2) Linearizes about this operating point.
+      # Linearizes about this operating point.
       tt = time.time()
       As, Bs_list = self._linearize_dynamics(xs, us_list)
       if self._verbose or iteration == 0:
         print("- Linearization computing time: ", time.time() - tt)
 
-      # (3) Quadraticize costs.
+      # Quadraticizes costs.
       tt = time.time()
       costs, lxs, Hxxs, Huus = self._quadraticize_costs(xs, us_list)
       if self._verbose or iteration == 0:
         print("- Quadraticization time: ", time.time() - tt)
 
-      # (4) Compute feedback Nash equilibrium of the resulting LQ game.
+      # Computes feedback Nash equilibrium of the resulting LQ game.
       tt = time.time()
       As = np.asarray(As)
       Bs_list = [np.asarray(Bs) for Bs in Bs_list]
@@ -131,7 +121,7 @@ class ILQSolver(object):
       if self._verbose or iteration == 0:
         print("- Forward & backward pass time: ", time.time() - tt)
 
-      # Accumulates total costs for both players.
+      # Accumulates total costs for all players.
       total_costs = [jnp.sum(costis) for costis in costs]
       print(
           "Iteration", iteration, "| Total cost for all players: ",
@@ -139,7 +129,7 @@ class ILQSolver(object):
           time.time() - t_start, "\n"
       )
 
-      # Update policy parameters.
+      # Updates policy parameters.
       self._Ps = Ps
       self._alphas = alphas
 
@@ -149,23 +139,45 @@ class ILQSolver(object):
           xs, us_list, current_Ps, best_alphas, Zs, zetas
       )
 
-      if total_cost_best < self._best_social_cost:
+      self._last_social_cost = self._current_social_cost
+      self._current_social_cost = total_cost_best_ls
+
+      if total_cost_best_ls < self._best_social_cost:
         self._best_operating_point = self._current_operating_point
-        self._best_social_cost = total_cost_best
+        self._best_social_cost = total_cost_best_ls
 
       iteration += 1
 
     plt.close()
 
-  # ------- TODO: CHANGE TO COST DIFFERENCE -------
-  def _is_converged(self):
-    """ Check if the last two operating points are close enough. """
+  def _is_converged_cost(self):
+    """
+    Checks convergence based on social costs.
+    """
+    if self._last_social_cost is None:
+      return False
+
+    TOLERANCE_RATE = 1e-5
+    cost_diff_rate = np.abs(
+        (self._current_social_cost - self._last_social_cost)
+        / self._last_social_cost
+    )
+
+    if cost_diff_rate > TOLERANCE_RATE:
+      return False
+    else:
+      return True
+
+  def _is_converged_traj(self):
+    """
+    Checks convergence based on trajectories.
+    """
     if self._last_operating_point is None:
       return False
 
     # Tolerance for comparing operating points. If all states changes
     # within this tolerance in the Euclidean norm then we've converged.
-    TOLERANCE = 1e-4
+    TOLERANCE = 1e-2
     for ii in range(self._horizon):
       last_x = self._last_operating_point[0][ii]
       current_x = self._current_operating_point[0][ii]
