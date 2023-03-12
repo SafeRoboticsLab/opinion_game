@@ -6,6 +6,7 @@ Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
 
 TODO:
+  - Remove unsed classes.
   - Rewrite comments
 """
 
@@ -15,6 +16,8 @@ from functools import partial
 from jax import jit, lax, jacfwd, hessian
 from jaxlib.xla_extension import DeviceArray
 import jax.numpy as jnp
+
+from opinion_dynamics.utils import softmax
 
 
 class Cost(object):
@@ -495,10 +498,6 @@ class ReferenceDeviationCost(Cost):
     """
     Reference trajectory following cost. Penalizes sum of squared deviations
     from a reference trajectory (of a given quantity, e.g. x or u1 or u2).
-
-    Initialize with a reference trajectory, stored as a list of np.arrays.
-    NOTE: This list will be updated externally as the reference
-          trajectory evolves with each iteration.
     """
     self.reference = reference
     self._dimension = dimension
@@ -524,6 +523,59 @@ class ReferenceDeviationCost(Cost):
       return (x[self._dimension] - self.reference)**2
     else:
       return (ui[self._dimension] - self.reference)**2
+
+
+class OpnWeightedReferenceDeviationCost(Cost):
+
+  def __init__(
+      self, reference, dimension=None, is_x=False, name="", horizon=None,
+      x_dim=None, ui_dim=None, z_dim=None, z_idx=None
+  ):
+    """
+    Opinion-weighted reference trajectory following cost.
+    Penalizes sum of squared deviations from a reference trajectory (of a given
+    quantity, e.g. x or u1 or u2).
+    """
+    self.reference = reference
+    self._dimension = dimension
+    self._is_x = is_x
+    self._z = jnp.zeros((z_dim,))
+    self._z_idx = z_idx
+    super(ReferenceDeviationCost, self).__init__(name, horizon, x_dim, ui_dim)
+
+  def update_opinion(self, z):
+    """
+    Updates the opinion state.
+
+    Args:
+        z (DeviceArray): opinion state.
+    """
+    self._z = z
+
+  @partial(jit, static_argnums=(0,))
+  def get_cost(
+      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
+  ) -> DeviceArray:
+    """
+    Evaluates this cost function on the given input state and/or control.
+
+    Args:
+        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
+        ui (DeviceArray, optional): control of the subsystem (nui,)
+        k (int, optional): time step. Defaults to 0.
+
+    Returns:
+        DeviceArray: scalar value of cost (scalar)
+    """
+
+    print("self._z = ", self._z)
+
+    weight_z = softmax(self._z, self._z_idx)
+
+    if self._is_x:
+      return weight_z * (x[self._dimension] - self.reference)**2
+    else:
+      return weight_z * (ui[self._dimension] - self.reference)**2
 
 
 class SemiquadraticCost(Cost):

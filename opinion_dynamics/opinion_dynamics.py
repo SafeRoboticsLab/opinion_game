@@ -26,9 +26,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
   def __init__(
       self, x_indices_P1, x_indices_P2, z_indices_P1, z_indices_P2,
-      att_indices_P1, att_indices_P2, Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom,
-      znom_P1, znom_P2, z_P1_bias, z_P2_bias, damping_opn=0.0, damping_att=0.0,
-      rho=1.0, T=0.1
+      att_indices_P1, att_indices_P2, z_P1_bias, z_P2_bias, damping_opn=0.0,
+      damping_att=0.0, rho=1.0, T=0.1
   ):
     """
     Initializer.
@@ -43,18 +42,6 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         z_indices_P2 (DeviceArray, dtype=int32): P2 z (opinion states) indices
         att_indices_P1 (DeviceArray, dtype=int32): P1 attention indices
         att_indices_P2 (DeviceArray, dtype=int32): P2 attention indices
-        Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
-          (subgame cost matrices)
-        Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
-          (subgame cost matrices)
-        zeta_P1 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P1's zeta
-          (subgame cost vectors)
-        zeta_P2 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P2's zeta
-          (subgame cost vectors)
-        x_ph_nom (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) subgame
-          nominal physical states
-        znom_P1 (DeviceArray): (nz_P1,) P1 nominal z
-        znom_P2 (DeviceArray): (nz_P2,) P2 nominal z
         z_P1_bias (DeviceArray): (nz,) P1 opinion state bias
         z_P2_bias (DeviceArray): (nz,) P2 opinion state bias
         damping_opn (float, optional): z damping parameter. Defaults to 0.0.
@@ -72,20 +59,13 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     self._z_indices_P2 = z_indices_P2
     self._att_indices_P1 = att_indices_P1
     self._att_indices_P2 = att_indices_P2
-    self._Z_P1 = Z_P1
-    self._Z_P2 = Z_P2
-    self._zeta_P1 = zeta_P1
-    self._zeta_P2 = zeta_P2
-    self._x_ph_nom = x_ph_nom
-    self._znom_P1 = znom_P1
-    self._znom_P2 = znom_P2
     self._z_P1_bias = z_P1_bias
     self._z_P2_bias = z_P2_bias
     self._damping_opn = damping_opn
     self._damping_att = damping_att
     self._rho = rho
 
-    self._eps = 1e-3
+    self._eps = 0.
 
     # Players' number of options
     self._num_opn_P1 = len(self._z_indices_P1)
@@ -99,8 +79,19 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         + self._num_att_P2, 0, T
     )
 
-  # @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(self, x: DeviceArray, ctrl=None) -> DeviceArray:
+  @partial(jit, static_argnums=(0,))
+  def cont_time_dyn(
+      self,
+      x: DeviceArray,
+      ctrl=None,
+      Z_P1: DeviceArray = None,
+      Z_P2: DeviceArray = None,
+      zeta_P1: DeviceArray = None,
+      zeta_P2: DeviceArray = None,
+      x_ph_nom: DeviceArray = None,
+      znom_P1: DeviceArray = None,
+      znom_P2: DeviceArray = None,
+  ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
     This is an autonomous system.
@@ -111,12 +102,24 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           For each opinion dynamics, their state := (z, u) where z is the
           opinion state and u is the attention parameter
         ctrl (DeviceArray): None
+        Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
+          (subgame cost matrices)
+        Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
+          (subgame cost matrices)
+        zeta_P1 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P1's zeta
+          (subgame cost vectors)
+        zeta_P2 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P2's zeta
+          (subgame cost vectors)
+        x_ph_nom (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) subgame
+          nominal physical states
+        znom_P1 (DeviceArray): (nz_P1,) P1 nominal z
+        znom_P2 (DeviceArray): (nz_P2,) P2 nominal z
 
     Returns:
         DeviceArray: next state (nx,)
+        DeviceArray: H (nz, nz)
     """
 
-    # @jit
     def Vhat1(
         z1: DeviceArray, z2: DeviceArray, x_ph: DeviceArray
     ) -> DeviceArray:
@@ -126,14 +129,13 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       V_hat = 0.
       for l1 in range(self._num_opn_P1):
         for l2 in range(self._num_opn_P2):
-          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
-          Z_sub = self._Z_P1[:, :, l1, l2]
-          zeta_sub = self._zeta_P1[:, l1, l2]
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P1[:, :, l1, l2]
+          zeta_sub = zeta_P1[:, l1, l2]
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
-    # @jit
     def Vhat2(
         z1: DeviceArray, z2: DeviceArray, x_ph: DeviceArray
     ) -> DeviceArray:
@@ -143,14 +145,13 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       V_hat = 0.
       for l1 in range(self._num_opn_P1):
         for l2 in range(self._num_opn_P2):
-          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
-          Z_sub = self._Z_P2[:, :, l1, l2]
-          zeta_sub = self._zeta_P2[:, l1, l2]
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P2[:, :, l1, l2]
+          zeta_sub = zeta_P2[:, l1, l2]
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
-    # @jit
     def compute_PoI_P1(z1: DeviceArray, x_ph: DeviceArray) -> DeviceArray:
       """
       Computes the Price of Indecision (PoI) for P1.
@@ -163,9 +164,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
         # Inner loop over P1's (ego) options.
         for l1 in range(self._num_opn_P1):
-          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
-          Z_sub = self._Z_P1[:, :, l1, l2]
-          zeta_sub = self._zeta_P1[:, l1, l2]
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P1[:, :, l1, l2]
+          zeta_sub = zeta_P1[:, l1, l2]
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_subs = V_subs.at[l1].set(V_sub)
 
@@ -184,7 +185,6 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       PoI = jnp.max(ratios)
       return PoI
 
-    # @jit
     def compute_PoI_P2(z2: DeviceArray, x_ph: DeviceArray) -> DeviceArray:
       """
       Computes the Price of Indecision (PoI) for P2.
@@ -198,9 +198,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
         # Inner loop over P2's (ego) options.
         for l2 in range(self._num_opn_P2):
-          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
-          Z_sub = self._Z_P1[:, :, l1, l2]
-          zeta_sub = self._zeta_P1[:, l1, l2]
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P1[:, :, l1, l2]
+          zeta_sub = zeta_P1[:, l1, l2]
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_subs = V_subs.at[l2].set(V_sub)
 
@@ -234,17 +234,15 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     # Computes game Hessians.
     dVhat1_dz1 = jacfwd(Vhat1, argnums=0)
     H1s = jacfwd(dVhat1_dz1, argnums=[0, 1])
-    H1 = jnp.hstack(H1s(self._znom_P1, self._znom_P2, x_ph))
+    H1 = jnp.hstack(H1s(znom_P1, znom_P2, x_ph))
 
     dVhat2_dz2 = jacfwd(Vhat2, argnums=1)
     H2s = jacfwd(dVhat2_dz2, argnums=[0, 1])
-    H2 = jnp.hstack(H2s(self._znom_P1, self._znom_P2, x_ph))
+    H2 = jnp.hstack(H2s(znom_P1, znom_P2, x_ph))
 
     H1 = jax.nn.standardize(H1)  # Avoid large numbers.
     H2 = jax.nn.standardize(H2)  # Avoid large numbers.
     H = jnp.vstack((H1, H2))
-
-    self.H = H
 
     # Computes the opinion state time derivative.
     att_1_vec = att1 * jnp.ones((self._num_opn_P1,))
@@ -266,11 +264,22 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1)
     att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1)
 
-    return jnp.hstack((z_dot, att1_dot, att2_dot))
+    return jnp.hstack((z_dot, att1_dot, att2_dot)), H, PoI_1, PoI_2
 
-  # @partial(jit, static_argnums=(0,))
+  @partial(jit, static_argnums=(0,))
   def cont_time_dyn_fixed_att(
-      self, x: DeviceArray, ctrl=None, att_P1=2.0, att_P2=2.0
+      self,
+      x: DeviceArray,
+      ctrl=None,
+      att_P1=2.0,
+      att_P2=2.0,
+      Z_P1: DeviceArray = None,
+      Z_P2: DeviceArray = None,
+      zeta_P1: DeviceArray = None,
+      zeta_P2: DeviceArray = None,
+      x_ph_nom: DeviceArray = None,
+      znom_P1: DeviceArray = None,
+      znom_P2: DeviceArray = None,
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -284,12 +293,23 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         ctrl (DeviceArray): None
         att_P1 (float, optional): P1 attention. Defaults to 2.0.
         att_P2 (float, optional): P2 attention. Defaults to 2.0.
+        Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
+          (subgame cost matrices)
+        Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
+          (subgame cost matrices)
+        zeta_P1 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P1's zeta
+          (subgame cost vectors)
+        zeta_P2 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P2's zeta
+          (subgame cost vectors)
+        x_ph_nom (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) subgame
+          nominal physical states
+        znom_P1 (DeviceArray): (nz_P1,) P1 nominal z
+        znom_P2 (DeviceArray): (nz_P2,) P2 nominal z
 
     Returns:
         DeviceArray: next state (nx,)
     """
 
-    # @jit
     def Vhat1(
         z1: DeviceArray, z2: DeviceArray, x_ph: DeviceArray
     ) -> DeviceArray:
@@ -299,14 +319,13 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       V_hat = 0.
       for l1 in range(self._num_opn_P1):
         for l2 in range(self._num_opn_P2):
-          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
-          Z_sub = self._Z_P1[:, :, l1, l2]
-          zeta_sub = self._zeta_P1[:, l1, l2]
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P1[:, :, l1, l2]
+          zeta_sub = zeta_P1[:, l1, l2]
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
-    # @jit
     def Vhat2(
         z1: DeviceArray, z2: DeviceArray, x_ph: DeviceArray
     ) -> DeviceArray:
@@ -316,9 +335,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       V_hat = 0.
       for l1 in range(self._num_opn_P1):
         for l2 in range(self._num_opn_P2):
-          xe = x_ph - self._x_ph_nom[:, l1, l2]  # error state
-          Z_sub = self._Z_P2[:, :, l1, l2]
-          zeta_sub = self._zeta_P2[:, l1, l2]
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P2[:, :, l1, l2]
+          zeta_sub = zeta_P2[:, l1, l2]
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
@@ -335,17 +354,15 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     # Computes game Hessians.
     dVhat1_dz1 = jacfwd(Vhat1, argnums=0)
     H1s = jacfwd(dVhat1_dz1, argnums=[0, 1])
-    H1 = jnp.hstack(H1s(self._znom_P1, self._znom_P2, x_ph))
+    H1 = jnp.hstack(H1s(znom_P1, znom_P2, x_ph))
 
     dVhat2_dz2 = jacfwd(Vhat2, argnums=1)
     H2s = jacfwd(dVhat2_dz2, argnums=[0, 1])
-    H2 = jnp.hstack(H2s(self._znom_P1, self._znom_P2, x_ph))
+    H2 = jnp.hstack(H2s(znom_P1, znom_P2, x_ph))
 
     H1 = jax.nn.standardize(H1)  # Avoid large numbers.
     H2 = jax.nn.standardize(H2)  # Avoid large numbers.
     H = jnp.vstack((H1, H2))
-
-    self.H = H
 
     # Computes the opinion state time derivative.
     att_1_vec = att_P1 * jnp.ones((self._num_opn_P1,))
@@ -360,4 +377,4 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     z_dot = -D @ z + jnp.hstack((H1z, H2z))
 
-    return z_dot
+    return z_dot, H

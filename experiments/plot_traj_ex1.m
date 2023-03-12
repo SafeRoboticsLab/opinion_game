@@ -1,7 +1,7 @@
 clear; close all; clc
 
 % Loads data.
-game_param = '22';
+game_param = '11';
 xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
 zs = double(readNPY(strcat('two_car/two_car_', game_param, '_opn.npy')));
 Hs = double(readNPY(strcat('two_car/two_car_', game_param, '_Hs.npy')));

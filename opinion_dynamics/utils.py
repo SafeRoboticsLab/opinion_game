@@ -23,4 +23,4 @@ def softmax(z: DeviceArray, idx: int) -> DeviceArray:
   Returns:
       DeviceArray: output.
   """
-  return jnp.exp(z[idx]) / sum(jnp.exp(z))
+  return jnp.exp(z[idx]) / jnp.sum(jnp.exp(z))
