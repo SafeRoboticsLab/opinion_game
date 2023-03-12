@@ -1,2 +1,2 @@
 # Opinion Games.
-Opinion-based differential games.
+Opinion-guided differential games.
