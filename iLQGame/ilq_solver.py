@@ -12,7 +12,6 @@ TODO:
 import time
 import numpy as np
 from typing import Tuple
-import matplotlib.pyplot as plt
 
 from functools import partial
 from jax import jit
@@ -29,9 +28,8 @@ class ILQSolver(object):
       max_iter=100, u_constraints=None, verbose=False
   ):
     """
-        Initialize from dynamics, player costs, current state, and initial
-        guesses for control strategies for both players.
-        """
+    Initializer.
+    """
     self._dynamics = dynamics
     self._player_costs = player_costs
     self._max_iter = max_iter
@@ -148,7 +146,97 @@ class ILQSolver(object):
 
       iteration += 1
 
-    plt.close()
+  def run_OG_two_player(self, *args):
+    """
+    Runs the iLQ-OG algorithm.
+
+    *args include subgame results.
+    """
+    iteration = 0
+
+    while (iteration <= self._max_iter):  #and (not self._is_converged_cost()):
+
+      t_start = time.time()
+
+      # Computes the current operating point and performs line search.
+      tt = time.time()
+      current_xs = self._current_operating_point[0]
+      current_us = self._current_operating_point[1]
+      current_Ps = self._Ps
+
+      # Line search based on social cost.
+      total_cost_best_ls = 1e10
+      best_alphas = self._alphas
+      for alpha_scaling in self._alpha_scaling:
+        current_alphas = self._alphas
+        current_alphas = [
+            (alpha_vec * alpha_scaling) for alpha_vec in current_alphas
+        ]
+        xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point(
+            current_xs, current_us, current_Ps, current_alphas
+        )
+        total_cost_alpha = sum([jnp.sum(costis) for costis in costs_alpha])
+
+        if total_cost_alpha < total_cost_best_ls:
+          xs = xs_alpha
+          us_list = us_list_alpha
+          best_alphas = current_alphas
+          total_cost_best_ls = total_cost_alpha
+
+      if self._verbose or iteration == 0:
+        print("- Reference computing time: ", time.time() - tt)
+
+      # Linearizes about this operating point.
+      tt = time.time()
+      As, Bs_list = self._linearize_dynamics(xs, us_list, args)
+      if self._verbose or iteration == 0:
+        print("- Linearization computing time: ", time.time() - tt)
+
+      exit()
+
+      # Quadraticizes costs.
+      tt = time.time()
+      costs, lxs, Hxxs, Huus = self._quadraticize_costs(xs, us_list)
+      if self._verbose or iteration == 0:
+        print("- Quadraticization time: ", time.time() - tt)
+
+      # Computes feedback Nash equilibrium of the resulting LQ game.
+      tt = time.time()
+      As = np.asarray(As)
+      Bs_list = [np.asarray(Bs) for Bs in Bs_list]
+      lxs = [np.asarray(lxs_i) for lxs_i in lxs]
+      Hxxs = [np.asarray(Hxxs_i) for Hxxs_i in Hxxs]
+      Huus = [np.asarray(Huus_i) for Huus_i in Huus]
+      Ps, alphas, Zs, zetas = self._solve_lq_game(As, Bs_list, Hxxs, lxs, Huus)
+      if self._verbose or iteration == 0:
+        print("- Forward & backward pass time: ", time.time() - tt)
+
+      # Accumulates total costs for all players.
+      total_costs = [jnp.sum(costis) for costis in costs]
+      print(
+          "Iteration", iteration, "| Total cost for all players: ",
+          total_costs, " | Iter. time: ",
+          time.time() - t_start, "\n"
+      )
+
+      # Updates policy parameters.
+      self._Ps = Ps
+      self._alphas = alphas
+
+      # Updates the operating points.
+      self._last_operating_point = self._current_operating_point
+      self._current_operating_point = (
+          xs, us_list, current_Ps, best_alphas, Zs, zetas
+      )
+
+      self._last_social_cost = self._current_social_cost
+      self._current_social_cost = total_cost_best_ls
+
+      if total_cost_best_ls < self._best_social_cost:
+        self._best_operating_point = self._current_operating_point
+        self._best_social_cost = total_cost_best_ls
+
+      iteration += 1
 
   def _is_converged_cost(self):
     """
@@ -244,8 +332,8 @@ class ILQSolver(object):
     return xs, us_list, costs_list
 
   @partial(jit, static_argnums=(0,))
-  def _linearize_dynamics(self, xs: DeviceArray,
-                          us_list: list) -> Tuple[DeviceArray, list]:
+  def _linearize_dynamics(self, xs: DeviceArray, us_list: list,
+                          *args) -> Tuple[DeviceArray, list]:
     """
     Linearizes dynamics at the current operating point.
 
@@ -266,7 +354,8 @@ class ILQSolver(object):
     # So we cannot use fori_loop.
     for k in range(self._horizon):
       A, B = self._dynamics.linearize_discrete_jitted(
-          xs[:, k], [us_list[ii][:, k] for ii in range(self._num_players)]
+          xs[:, k], [us_list[ii][:, k] for ii in range(self._num_players)],
+          args
       )
       As = As.at[:, :, k].set(A)
 
@@ -422,87 +511,3 @@ class ILQSolver(object):
         zetas[ii][:, k] = F.T @ (zeta[ii] + Z[ii] @ beta) + l[
             ii] + P_split[ii].T @ R[ii] @ alpha_split[ii]
     return Ps, alphas, Zs, zetas
-
-  def plot_controls(self, player_id, fig_width=15., fig_length=8.):
-    """
-    Plots control signals.
-
-    Args:
-        player_id (int): id of the player whose control signal is to be plotted
-    """
-    dt = self._dynamics._T
-    current_us = self._current_operating_point[1]
-
-    u1 = current_us[player_id - 1][0, :].flatten()
-    u2 = current_us[player_id - 1][1, :].flatten()
-
-    t_grid = np.arange(0, current_us[player_id - 1].shape[1]) * dt
-
-    plt.figure()
-    fig, axs = plt.subplots(2)
-    fig.suptitle(
-        'Optimized controls of Player ' + str(player_id) + ' over time'
-    )
-    fig.set_size_inches(fig_width, fig_length)
-
-    axs[0].step(t_grid, u1)
-    axs[0].set_xlabel('time (s)')
-    axs[0].set_ylabel('$\omega$ (rad/s)')
-    axs[0].grid()
-
-    axs[1].step(t_grid, u2)
-    axs[1].set_xlabel('time (s)')
-    axs[1].set_ylabel('$a$ (m/s$^2$)')
-    axs[1].grid()
-
-    plt.show()
-
-  def plot_opinions(
-      self, opn_state_idx_list, fig_width=12., fig_length=10., font_size=16
-  ):
-    """
-    Plots opinion state trajectories.
-
-    Args:
-        opn_state_idx (list): [[z1_index, u1_index], [z2_index, u2_index], ...]
-    """
-    # assert len(opn_state_idx_list) == self._num_players
-
-    dt = self._dynamics._T
-    current_xs = self._current_operating_point[0]
-
-    plt.rcParams.update({'font.size': font_size})
-    plt.figure()
-    fig, axs = plt.subplots(len(opn_state_idx_list), 1)
-    fig.set_size_inches(fig_width, fig_length)
-    fig.tight_layout(pad=5.0)
-
-    t_grid = np.arange(0, current_xs.shape[1]) * dt
-
-    player_count = 0
-    for opn_state_idx in opn_state_idx_list:
-
-      z_idx = opn_state_idx[0]
-      u_idx = opn_state_idx[1]
-
-      z = current_xs[z_idx, :].flatten()
-      u = current_xs[u_idx, :].flatten()
-
-      if len(opn_state_idx_list) > 1:
-        ax = axs[player_count]
-      else:
-        ax = axs
-
-      ax.plot(t_grid, z, color='b')
-      ax.plot(t_grid, u, color='m')
-      ax.set_xlabel('time (s)')
-      ax.set_ylabel('opinion state')
-      ax.title.set_text(
-          'Opinion states of Player ' + str(player_count + 1) + ' over time'
-      )
-      ax.legend(('$z$', '$\lambda$'), loc='upper right')
-      ax.grid()
-
-      player_count += 1
-
-    plt.show()

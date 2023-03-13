@@ -24,11 +24,13 @@ from opinion_dynamics.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
 config = load_config("example_two_car.yaml")
 
 # General parameters.
-TIME_HORIZON = config.TIME_HORIZON  # s
+TIME_HORIZON_SGA = config.TIME_HORIZON  # subgame horizon (s)
+TIME_HORIZON_RHC = config.TIME_HORIZON_RHC  # RHC planning horizon (s)
 TIME_RES = config.TIME_RES  # s
-HORIZON_STEPS = int(TIME_HORIZON / TIME_RES)
+HORIZON_STEPS = int(TIME_HORIZON_RHC / TIME_RES)
 LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
+N_SGA = int(TIME_HORIZON_SGA / config.TIME_RES)
 
 # Creates subsystem dynamics.
 car_R = Car4D(l=3.0, T=TIME_RES)
@@ -271,23 +273,86 @@ u_constraints_car_H = BoxConstraint(
     lower=jnp.hstack((a_min, w_min)), upper=jnp.hstack((a_max, w_max))
 )
 
-# Sets up opinion-weighted cost
+# Sets up opinion-weighted costs.
+for car_R_opn in [1, 2]:
+  for car_H_opn in [1, 2]:
 
+    # Define players' goals and weights.
+    if car_R_opn == 1:
+      car_R_goal_py = config.GOAL_PY_1
+      car_R_goal_weight = config.GOAL_W_P1_1
+    elif car_R_opn == 2:
+      car_R_goal_py = config.GOAL_PY_2
+      car_R_goal_weight = config.GOAL_W_P1_2
 
-# Sets up ILQSolver.
+    if car_H_opn == 1:
+      car_H_goal_py = config.GOAL_PY_1
+      car_H_goal_weight = config.GOAL_W_P2_1
+    elif car_H_opn == 2:
+      car_H_goal_py = config.GOAL_PY_2
+      car_H_goal_weight = config.GOAL_W_P2_2
+
+    # Cost items for tracking the target lane (y-position).
+    car_R_goal_py_cost = OpnWeightedReferenceDeviationCost(
+        reference=car_R_goal_py, dimension=car_R_py_index, is_x=True,
+        name="opn_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
+        ui_dim=car_R._u_dim, z_idx=car_R_opn, player_id=car_R_player_id
+    )
+    car_H_goal_py_cost = OpnWeightedReferenceDeviationCost(
+        reference=car_H_goal_py, dimension=car_H_py_index, is_x=True,
+        name="opn_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
+        ui_dim=car_H._u_dim, z_idx=car_H_opn, player_id=car_H_player_id
+    )
+
+    car_R_cost.add_cost(car_R_goal_py_cost, "x", car_R_goal_weight)
+    car_H_cost.add_cost(car_H_goal_py_cost, "x", car_H_goal_weight)
+
+# Loads subgame results.
+Z1 = np.zeros((8, 8, 2, 2, N_SGA + 1))
+Z2 = np.zeros((8, 8, 2, 2, N_SGA + 1))
+zeta1 = np.zeros((8, 2, 2, N_SGA + 1))
+zeta2 = np.zeros((8, 2, 2, N_SGA + 1))
+xnom = np.zeros((8, 2, 2, N_SGA))
+for l1 in [1, 2]:
+  for l2 in [1, 2]:
+
+    FILE_NAME_SG = FILE_NAME + '_' + str(l1) + str(l2)
+
+    Z_list_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_Zs.npy'))
+    Z1[:, :, l1 - 1, l2 - 1, :] = Z_list_sub[0]
+    Z2[:, :, l1 - 1, l2 - 1, :] = Z_list_sub[1]
+
+    zeta_list_sub = np.load(
+        os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_zetas.npy')
+    )
+    zeta1[:, l1 - 1, l2 - 1, :] = zeta_list_sub[0]
+    zeta2[:, l1 - 1, l2 - 1, :] = zeta_list_sub[1]
+
+    xnom_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_xs.npy'))
+    xnom[:, l1 - 1, l2 - 1, :] = xnom_sub
+
+_subgame = (Z1, Z2, zeta1, zeta2, xnom)
+
+# Sets up ILQSolver for QMDP-style Opinion Game.
+car_R_Ps = jnp.zeros((car_R._u_dim, jnt_sys._x_dim, HORIZON_STEPS))
+car_H_Ps = jnp.zeros((car_H._u_dim, jnt_sys._x_dim, HORIZON_STEPS))
+
+car_R_alphas = jnp.zeros((car_R._u_dim, HORIZON_STEPS))
+car_H_alphas = jnp.zeros((car_H._u_dim, HORIZON_STEPS))
+
 alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)
-# alpha_scaling = np.logspace(-2, -0.04, config.ALPHA_SCALING_NUM)
+
 solver = ILQSolver(
     jnt_sys,
-    [car_R_cost_subgame, car_H_cost_subgame],
+    [car_R_cost, car_H_cost],
     jnt_x0,
     [car_R_Ps, car_H_Ps],
     [car_R_alphas, car_H_alphas],
     alpha_scaling,
-    config.MAX_ITER,
+    config.MAX_ITER_RHC,
     u_constraints=[u_constraints_car_R, u_constraints_car_H],
     verbose=config.VERBOSE,
 )
 
-# Solves subgames.
-solver.run()
+# RHC planning and simulation.
+N_sim = config.N_SIM

@@ -31,7 +31,7 @@ LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
 N = int(config.TIME_HORIZON / config.TIME_RES)
 
-# Load subgame results.
+# Loads subgame results.
 Z1 = np.zeros((8, 8, 2, 2, N + 1))
 Z2 = np.zeros((8, 8, 2, 2, N + 1))
 zeta1 = np.zeros((8, 2, 2, N + 1))
@@ -40,27 +40,19 @@ xnom = np.zeros((8, 2, 2, N))
 for l1 in [1, 2]:
   for l2 in [1, 2]:
 
-    Z_list_sub = np.load(
-        os.path.join(
-            LOG_DIRECTORY, FILE_NAME + '_' + str(l1) + str(l2) + '_Zs.npy'
-        )
-    )
+    FILE_NAME_SG = FILE_NAME + '_' + str(l1) + str(l2)
+
+    Z_list_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_Zs.npy'))
     Z1[:, :, l1 - 1, l2 - 1, :] = Z_list_sub[0]
     Z2[:, :, l1 - 1, l2 - 1, :] = Z_list_sub[1]
 
     zeta_list_sub = np.load(
-        os.path.join(
-            LOG_DIRECTORY, FILE_NAME + '_' + str(l1) + str(l2) + '_zetas.npy'
-        )
+        os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_zetas.npy')
     )
     zeta1[:, l1 - 1, l2 - 1, :] = zeta_list_sub[0]
     zeta2[:, l1 - 1, l2 - 1, :] = zeta_list_sub[1]
 
-    xnom_sub = np.load(
-        os.path.join(
-            LOG_DIRECTORY, FILE_NAME + '_' + str(l1) + str(l2) + '_xs.npy'
-        )
-    )
+    xnom_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_xs.npy'))
     xnom[:, l1 - 1, l2 - 1, :] = xnom_sub
 
 # ------ Dynamic attention ------
@@ -68,8 +60,8 @@ z = np.zeros((6, N + 1))
 Hs = np.zeros((4, 4, N))
 PoI = np.zeros((2, N))
 
-car_R_opn = 2
-car_H_opn = 2
+car_R_opn = 1
+car_H_opn = 1
 
 z_bias = 1e-3 * np.ones((2,))
 
@@ -117,19 +109,19 @@ for k in range(N):
 
 exit()
 
-np.save(
-    os.path.join(
-        LOG_DIRECTORY,
-        FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_opn.npy'
-    ), z
-)
+# np.save(
+#     os.path.join(
+#         LOG_DIRECTORY,
+#         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_opn.npy'
+#     ), z
+# )
 
-np.save(
-    os.path.join(
-        LOG_DIRECTORY,
-        FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Hs.npy'
-    ), Hs
-)
+# np.save(
+#     os.path.join(
+#         LOG_DIRECTORY,
+#         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Hs.npy'
+#     ), Hs
+# )
 
 # # ------ Fixed attention ------
 # # Constructs a Game-induced NOD and simulates it along subgame trajectories.
@@ -137,8 +129,8 @@ np.save(
 
 # z = np.zeros((4, N + 1))
 
-# car_R_opn = 2
-# car_H_opn = 2
+# car_R_opn = 1
+# car_H_opn = 1
 
 # z_bias = 1e-3 * np.ones((2,))
 
@@ -172,8 +164,8 @@ np.save(
 #   x_joint_k = np.hstack((xnom_k[:, car_R_opn - 1, car_H_opn - 1], z[:, k]))
 
 #   z_dot_k, H_k = GiNOD.cont_time_dyn_fixed_att(
-#       x_joint_k, None, 2.0, 2.0, Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k,
-#       znom2_k
+#       x_joint_k, None, Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k,
+#       2.0, 2.0
 #   )
 
 #   z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k

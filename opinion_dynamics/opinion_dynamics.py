@@ -1,5 +1,5 @@
 """
-Game-induced nonlinear opinion dynamics.
+Game-induced nonlinear opinion dynamics (GiNOD).
 
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
@@ -86,13 +86,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       self,
       x: DeviceArray,
       ctrl=None,
-      Z_P1: DeviceArray = None,
-      Z_P2: DeviceArray = None,
-      zeta_P1: DeviceArray = None,
-      zeta_P2: DeviceArray = None,
-      x_ph_nom: DeviceArray = None,
-      znom_P1: DeviceArray = None,
-      znom_P2: DeviceArray = None,
+      *args,
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -104,6 +98,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           For each opinion dynamics, their state := (z, u) where z is the
           opinion state and u is the attention parameter
         ctrl (DeviceArray): None
+
+        *args include:
         Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
           (subgame cost matrices)
         Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
@@ -221,6 +217,14 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       PoI = jnp.max(ratios)
       return PoI
 
+    Z_P1 = args[0]
+    Z_P2 = args[1]
+    zeta_P1 = args[2]
+    zeta_P2 = args[3]
+    x_ph_nom = args[4]
+    znom_P1 = args[5]
+    znom_P2 = args[6]
+
     # State variables.
     x_ph1 = x[self._x_indices_P1]
     x_ph2 = x[self._x_indices_P2]
@@ -273,15 +277,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       self,
       x: DeviceArray,
       ctrl=None,
-      att_P1=2.0,
-      att_P2=2.0,
-      Z_P1: DeviceArray = None,
-      Z_P2: DeviceArray = None,
-      zeta_P1: DeviceArray = None,
-      zeta_P2: DeviceArray = None,
-      x_ph_nom: DeviceArray = None,
-      znom_P1: DeviceArray = None,
-      znom_P2: DeviceArray = None,
+      *args,
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -293,8 +289,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           For each opinion dynamics, their state := (z, u) where z is the
           opinion state and u is the attention parameter
         ctrl (DeviceArray): None
-        att_P1 (float, optional): P1 attention. Defaults to 2.0.
-        att_P2 (float, optional): P2 attention. Defaults to 2.0.
+
+        *args include:
         Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
           (subgame cost matrices)
         Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
@@ -307,6 +303,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           nominal physical states
         znom_P1 (DeviceArray): (nz_P1,) P1 nominal z
         znom_P2 (DeviceArray): (nz_P2,) P2 nominal z
+        att_P1 (float): P1 attention.
+        att_P2 (float): P2 attention.
 
     Returns:
         DeviceArray: next state (nx,)
@@ -343,6 +341,16 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
+
+    Z_P1 = args[0]
+    Z_P2 = args[1]
+    zeta_P1 = args[2]
+    zeta_P2 = args[3]
+    x_ph_nom = args[4]
+    znom_P1 = args[5]
+    znom_P2 = args[6]
+    att_P1 = args[7]
+    att_P2 = args[8]
 
     # State variables.
     x_ph1 = x[self._x_indices_P1]
