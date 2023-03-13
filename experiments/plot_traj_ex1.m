@@ -1,10 +1,13 @@
 clear; close all; clc
 
 % Loads data.
-game_param = '11';
-xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
-zs = double(readNPY(strcat('two_car/two_car_', game_param, '_opn.npy')));
-Hs = double(readNPY(strcat('two_car/two_car_', game_param, '_Hs.npy')));
+game_param = '22';
+% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_demo.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_', game_param, '_opn.npy')));
+% Hs = double(readNPY(strcat('two_car/two_car_', game_param, '_Hs.npy')));
+
+xs = double(readNPY(strcat('two_car/two_car_RHC_xs.npy')))';
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
@@ -27,7 +30,7 @@ option.rotation = 0;
 option.centre = [348; 203];
 
 % Real world length for scaling
-option.length = 5;
+option.length = 4.5;
 
 % Interpolates data.
 if option.N_interp == 1

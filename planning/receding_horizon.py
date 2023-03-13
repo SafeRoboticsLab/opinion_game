@@ -7,12 +7,6 @@ Author: Haimin Hu (haiminh@princeton.edu)
 
 import time
 import numpy as np
-from typing import Tuple
-
-from functools import partial
-from jax import jit
-from jaxlib.xla_extension import DeviceArray
-import jax.numpy as jnp
 
 
 class RHCPlanner(object):
@@ -41,7 +35,7 @@ class RHCPlanner(object):
     xs = x0
     x = x0
 
-    for _ in range(self._N_sim):
+    for k in range(self._N_sim):
       x_ph = np.hstack(
           (x[self._GiNOD._x_indices_P1], x[self._GiNOD._x_indices_P2])
       )[:, np.newaxis]
@@ -63,15 +57,38 @@ class RHCPlanner(object):
           zeta1_k[:, l1 - 1, l2 - 1] = self._zeta1[:, l1 - 1, l2 - 1, idx_k]
           zeta2_k[:, l1 - 1, l2 - 1] = self._zeta2[:, l1 - 1, l2 - 1, idx_k]
           xnom_k[:, l1 - 1, l2 - 1] = self._xnom[:, l1 - 1, l2 - 1, idx_k]
-          print('[RHC] idx_k:', idx_k)
+
+      # Assigns warmstart strategies.
+      Ps_warmstart = self._ILQSolver._Ps
+      alphas_warmstart = self._ILQSolver._alphas
 
       # Solves iLQ-OG.
-      znom1_k = x[self._GiNOD._z_indices_P1]
-      znom2_k = x[self._GiNOD._z_indices_P2]
+      z1_k = x[self._GiNOD._z_indices_P1]
+      z2_k = x[self._GiNOD._z_indices_P2]
+      att1_k = x[self._GiNOD._att_indices_P1]
+      att2_k = x[self._GiNOD._att_indices_P2]
 
-      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k)
+      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_k, z2_k)
 
-      self._ILQSolver.run_OG_two_player(x, subgame_k)
+      t_start = time.time()
+      self._ILQSolver.run_OG_two_player(
+          x, subgame_k, Ps_warmstart, alphas_warmstart
+      )
+      print("[RHC] iLQ-OG solving time: ", time.time() - t_start, "\n")
+
+      x_ILQ = self._ILQSolver._best_operating_point[0][:, 1]
 
       # Stores results.
+      z = np.hstack((z1_k, z2_k, att1_k, att2_k))
+      z_dot_k = self._GiNOD.cont_time_dyn(x, None, subgame_k)
+      z = z + self._GiNOD._T * z_dot_k
+      x_ph = np.hstack(
+          (x_ILQ[self._GiNOD._x_indices_P1], x_ILQ[self._GiNOD._x_indices_P2])
+      )
+      x = np.hstack((x_ph, z))
+
       xs = np.vstack((xs, x))
+
+      print(z)
+
+    self.xs = xs

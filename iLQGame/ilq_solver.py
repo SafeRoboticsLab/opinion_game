@@ -34,32 +34,42 @@ class ILQSolver(object):
     self._player_costs = player_costs
     self._max_iter = max_iter
     self._x0 = x0
-    self._Ps = Ps
-    self._alphas = alphas
-    self._x0_init = x0
     self._Ps_init = Ps
     self._alphas_init = alphas
     self._u_constraints = u_constraints
     self._horizon = Ps[0].shape[2]
     self._num_players = dynamics._num_players
+    self._alpha_scaling = alpha_scaling
+    self._verbose = verbose
 
-    # Current and previous operating points (states/controls) for use
-    # in checking convergence.
+    self.reset()
+
+  def reset(self, Ps_warmstart=None, alphas_warmstart=None):
+    """
+    Resets the solver and warmstart if possible.
+    """
+    if Ps_warmstart is None:
+      self._Ps = self._Ps_init
+    else:
+      self._Ps = Ps_warmstart
+    if alphas_warmstart is None:
+      self._alphas = self._alphas_init
+    else:
+      self._alphas = alphas_warmstart
     self._last_operating_point = None
     _current_x = jnp.zeros((self._dynamics._x_dim, self._horizon))
     _current_u = [
         jnp.zeros((ui_dim, self._horizon)) for ui_dim in self._dynamics._u_dims
     ]
-    self._current_operating_point = (_current_x, _current_u, Ps, alphas)
-    self._best_operating_point = (_current_x, _current_u, Ps, alphas)
+    self._current_operating_point = (
+        _current_x, _current_u, self._Ps, self._alphas
+    )
+    self._best_operating_point = (
+        _current_x, _current_u, self._Ps, self._alphas
+    )
     self._best_social_cost = 1e10
     self._current_social_cost = 1e10
     self._last_social_cost = None
-
-    # Fixed step size for the linesearch.
-    self._alpha_scaling = alpha_scaling
-
-    self._verbose = verbose
 
   def run(self):
     """
@@ -86,7 +96,7 @@ class ILQSolver(object):
             (alpha_vec * alpha_scaling) for alpha_vec in current_alphas
         ]
         xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point(
-            current_xs, current_us, current_Ps, current_alphas
+            current_xs, current_us, current_Ps, current_alphas, self._x0
         )
         total_cost_alpha = sum([jnp.sum(costis) for costis in costs_alpha])
 
@@ -97,19 +107,19 @@ class ILQSolver(object):
           total_cost_best_ls = total_cost_alpha
 
       if self._verbose or iteration == 0:
-        print("- Reference computing time: ", time.time() - tt)
+        print("[iLQ] Reference computing time: ", time.time() - tt)
 
       # Linearizes about this operating point.
       tt = time.time()
       As, Bs_list = self._linearize_dynamics(xs, us_list)
       if self._verbose or iteration == 0:
-        print("- Linearization computing time: ", time.time() - tt)
+        print("[iLQ] Linearization computing time: ", time.time() - tt)
 
       # Quadraticizes costs.
       tt = time.time()
       costs, lxs, Hxxs, Huus = self._quadraticize_costs(xs, us_list)
       if self._verbose or iteration == 0:
-        print("- Quadraticization time: ", time.time() - tt)
+        print("[iLQ] Quadraticization time: ", time.time() - tt)
 
       # Computes feedback Nash equilibrium of the resulting LQ game.
       tt = time.time()
@@ -120,12 +130,12 @@ class ILQSolver(object):
       Huus = [np.asarray(Huus_i) for Huus_i in Huus]
       Ps, alphas, Zs, zetas = self._solve_lq_game(As, Bs_list, Hxxs, lxs, Huus)
       if self._verbose or iteration == 0:
-        print("- Forward & backward pass time: ", time.time() - tt)
+        print("[iLQ] Forward & backward pass time: ", time.time() - tt)
 
       # Accumulates total costs for all players.
       total_costs = [jnp.sum(costis) for costis in costs]
       print(
-          "Iteration", iteration, "| Total cost for all players: ",
+          "[iLQ] Iteration", iteration, "| Total cost for all players: ",
           total_costs, " | Iter. time: ",
           time.time() - t_start, "\n"
       )
@@ -149,7 +159,9 @@ class ILQSolver(object):
 
       iteration += 1
 
-  def run_OG_two_player(self, x0, subgame):
+  def run_OG_two_player(
+      self, x0, subgame, Ps_warmstart=None, alphas_warmstart=None
+  ):
     """
     Runs the iLQ-OG algorithm.
     """
@@ -157,8 +169,7 @@ class ILQSolver(object):
 
     # Initialization.
     self._x0 = x0
-    self._Ps = self._Ps_init
-    self._alphas = self._alphas_init
+    self.reset(Ps_warmstart, alphas_warmstart)
 
     while (iteration <= self._max_iter):  #and (not self._is_converged_cost()):
 
@@ -171,7 +182,7 @@ class ILQSolver(object):
       current_Ps = self._Ps
 
       # Line search based on social cost.
-      total_cost_best_ls = 1e10
+      total_cost_best_ls = np.Inf
       best_alphas = self._alphas
       for alpha_scaling in self._alpha_scaling:
         current_alphas = self._alphas
@@ -180,7 +191,7 @@ class ILQSolver(object):
         ]
 
         xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point_OG(
-            current_xs, current_us, current_Ps, current_alphas, subgame
+            current_xs, current_us, current_Ps, current_alphas, x0, subgame
         )
         total_cost_alpha = sum([jnp.sum(costis) for costis in costs_alpha])
 
@@ -190,24 +201,20 @@ class ILQSolver(object):
           best_alphas = current_alphas
           total_cost_best_ls = total_cost_alpha
 
-      if self._verbose or iteration == 0:
-        print("- Reference computing time: ", time.time() - tt)
+      if self._verbose:
+        print("[iLQ] Reference computing time: ", time.time() - tt)
 
       # Linearizes about this operating point.
       tt = time.time()
       As, Bs_list = self._linearize_dynamics(xs, us_list, subgame)
-      if self._verbose or iteration == 0:
-        print("- Linearization computing time: ", time.time() - tt)
-
-      print(As)
-
-      exit()
+      if self._verbose:
+        print("[iLQ] Linearization computing time: ", time.time() - tt)
 
       # Quadraticizes costs.
       tt = time.time()
       costs, lxs, Hxxs, Huus = self._quadraticize_costs(xs, us_list)
-      if self._verbose or iteration == 0:
-        print("- Quadraticization time: ", time.time() - tt)
+      if self._verbose:
+        print("[iLQ] Quadraticization time: ", time.time() - tt)
 
       # Computes feedback Nash equilibrium of the resulting LQ game.
       tt = time.time()
@@ -217,16 +224,17 @@ class ILQSolver(object):
       Hxxs = [np.asarray(Hxxs_i) for Hxxs_i in Hxxs]
       Huus = [np.asarray(Huus_i) for Huus_i in Huus]
       Ps, alphas, Zs, zetas = self._solve_lq_game(As, Bs_list, Hxxs, lxs, Huus)
-      if self._verbose or iteration == 0:
-        print("- Forward & backward pass time: ", time.time() - tt)
+      if self._verbose:
+        print("[iLQ] Forward & backward pass time: ", time.time() - tt)
 
       # Accumulates total costs for all players.
       total_costs = [jnp.sum(costis) for costis in costs]
-      print(
-          "Iteration", iteration, "| Total cost for all players: ",
-          total_costs, " | Iter. time: ",
-          time.time() - t_start, "\n"
-      )
+      if self._verbose:
+        print(
+            "[iLQ] Iteration", iteration, "| Total cost for all players: ",
+            total_costs, " | Iter. time: ",
+            time.time() - t_start, "\n"
+        )
 
       # Updates policy parameters.
       self._Ps = Ps
@@ -286,7 +294,8 @@ class ILQSolver(object):
 
   @partial(jit, static_argnums=(0,))
   def _compute_operating_point(
-      self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list
+      self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list,
+      x0: DeviceArray
   ) -> Tuple[DeviceArray, list]:
     """
     Computes current operating point by propagating through dynamics.
@@ -306,7 +315,7 @@ class ILQSolver(object):
 
     # Computes the joint state trajectory.
     xs = jnp.zeros((x_dim, self._horizon))
-    xs = xs.at[:, 0].set(self._x0)
+    xs = xs.at[:, 0].set(x0)
     us_list = [jnp.zeros((ui_dim, self._horizon)) for ui_dim in u_dims]
 
     # NOTE: Here we have to index on the list for disc_time_dyn().
@@ -344,7 +353,7 @@ class ILQSolver(object):
   @partial(jit, static_argnums=(0,))
   def _compute_operating_point_OG(
       self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list,
-      subgame: Tuple
+      x0: DeviceArray, subgame: Tuple
   ) -> Tuple[DeviceArray, list]:
     """
     Computes current operating point by propagating through dynamics.
@@ -354,6 +363,7 @@ class ILQSolver(object):
         current_us (list of DeviceArray): controls [(nui, N)]
         Ps (list of DeviceArray)
         alphas (list of DeviceArray)
+        x0 (DeviceArray): initial state
         subgame (Tuple)
 
     Returns:
@@ -365,7 +375,7 @@ class ILQSolver(object):
 
     # Computes the joint state trajectory.
     xs = jnp.zeros((x_dim, self._horizon))
-    xs = xs.at[:, 0].set(self._x0)
+    xs = xs.at[:, 0].set(x0)
     us_list = [jnp.zeros((ui_dim, self._horizon)) for ui_dim in u_dims]
 
     # NOTE: Here we have to index on the list for disc_time_dyn().
@@ -402,7 +412,7 @@ class ILQSolver(object):
 
   @partial(jit, static_argnums=(0,))
   def _linearize_dynamics(self, xs: DeviceArray, us_list: list,
-                          *args) -> Tuple[DeviceArray, list]:
+                          args=()) -> Tuple[DeviceArray, list]:
     """
     Linearizes dynamics at the current operating point.
 
@@ -539,6 +549,9 @@ class ILQSolver(object):
       S = np.concatenate(S_rows, axis=0)
 
       Y = np.concatenate([B[ii].T @ Z[ii] @ A for ii in range(num_players)])
+
+      S = np.nan_to_num(S, nan=0.0)
+      Y = np.nan_to_num(Y, nan=0.0)
 
       P, _, _, _ = np.linalg.lstsq(a=S, b=Y, rcond=None)
       # P = np.linalg.pinv(S) @ Y

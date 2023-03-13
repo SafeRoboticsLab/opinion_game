@@ -42,17 +42,21 @@ for l1 in [1, 2]:
 
     FILE_NAME_SG = FILE_NAME + '_' + str(l1) + str(l2)
 
-    Z_list_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_Zs.npy'))
+    Z_list_sub = np.load(
+        os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_Zs_demo.npy')
+    )
     Z1[:, :, l1 - 1, l2 - 1, :] = Z_list_sub[0]
     Z2[:, :, l1 - 1, l2 - 1, :] = Z_list_sub[1]
 
     zeta_list_sub = np.load(
-        os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_zetas.npy')
+        os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_zetas_demo.npy')
     )
     zeta1[:, l1 - 1, l2 - 1, :] = zeta_list_sub[0]
     zeta2[:, l1 - 1, l2 - 1, :] = zeta_list_sub[1]
 
-    xnom_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_xs.npy'))
+    xnom_sub = np.load(
+        os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_xs_demo.npy')
+    )
     xnom[:, l1 - 1, l2 - 1, :] = xnom_sub
 
 # ------ Dynamic attention ------
@@ -60,8 +64,8 @@ z = np.zeros((6, N + 1))
 Hs = np.zeros((4, 4, N))
 PoI = np.zeros((2, N))
 
-car_R_opn = 1
-car_H_opn = 1
+car_R_opn = 2
+car_H_opn = 2
 
 z_bias = 1e-3 * np.ones((2,))
 

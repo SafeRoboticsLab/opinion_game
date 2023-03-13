@@ -52,9 +52,9 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P1_bias=z_bias,
     z_P2_bias=z_bias,
     T=TIME_RES,
-    damping_opn=0.0,
-    damping_att=1.0,
-    rho=0.7,
+    damping_opn=0.1,
+    damping_att=0.5,
+    rho=1.0,
 )
 
 # Defines the OPS (joint opinion-physical state system)
@@ -62,7 +62,7 @@ jnt_sys.add_opinion_dyn(GiNOD)
 x_dim = jnt_sys._x_dim
 
 # Initializes states and iLQ policies.
-car_R_px0 = 2.0
+car_R_px0 = 0.0
 car_R_py0 = 0.0
 car_R_theta0 = 0.0
 car_R_v0 = 5.0
@@ -104,14 +104,16 @@ car_R_maxv_cost = MaxVelCostPxDependent(
 )  # Penalizes car speed above a threshold near the toll station.
 
 car_R_lower_road_cost = SemiquadraticCost(
-    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD,
-    oriented_right=False, is_x=True, name="car_R_lower_road_cost",
-    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+    dimension=car_R_py_index,
+    threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD * 0.8, oriented_right=False,
+    is_x=True, name="car_R_lower_road_cost", horizon=HORIZON_STEPS,
+    x_dim=x_dim, ui_dim=car_R._u_dim
 )
 car_R_upper_road_cost = SemiquadraticCost(
-    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD,
-    oriented_right=True, is_x=True, name="car_R_upper_road_cost",
-    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+    dimension=car_R_py_index,
+    threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD * 0.8, oriented_right=True,
+    is_x=True, name="car_R_upper_road_cost", horizon=HORIZON_STEPS,
+    x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Round boundary costs.
 
 car_R_min_vel_cost = SemiquadraticCost(
@@ -213,7 +215,7 @@ car_R_cost.add_cost(car_R_goal_vel_cost, "x", 1.0)
 
 car_R_cost.add_cost(car_R_lower_road_cost, "x", 50.0)
 car_R_cost.add_cost(car_R_upper_road_cost, "x", 50.0)
-car_R_cost.add_cost(car_R_min_vel_cost, "x", 50.0)
+car_R_cost.add_cost(car_R_min_vel_cost, "x", 100.0)
 car_R_cost.add_cost(proximity_cost_RH, "x", 150.0)
 
 car_R_player_id = 1
@@ -230,7 +232,7 @@ car_H_cost.add_cost(car_H_goal_vel_cost, "x", 1.0)
 
 car_H_cost.add_cost(car_H_lower_road_cost, "x", 50.0)
 car_H_cost.add_cost(car_H_upper_road_cost, "x", 50.0)
-car_H_cost.add_cost(car_H_min_vel_cost, "x", 50.0)
+car_H_cost.add_cost(car_H_min_vel_cost, "x", 100.0)
 car_H_cost.add_cost(proximity_cost_RH, "x", 150.0)
 
 car_H_player_id = 2
@@ -361,3 +363,5 @@ N_sim = config.N_SIM
 planner = RHCPlanner(solver, N_sim, GiNOD, subgame)
 
 planner.plan(jnt_x0)
+
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_RHC_xs.npy'), planner.xs)

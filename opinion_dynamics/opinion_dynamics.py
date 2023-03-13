@@ -66,6 +66,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     self._rho = rho
 
     self._eps = 0.
+    self._PoI_max = 10.0
 
     # Players' number of options
     self._num_opn_P1 = len(self._z_indices_P1)
@@ -185,7 +186,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         ratios = ratios.at[l2].set(ratio)
 
       PoI = jnp.max(ratios)
-      return PoI
+      return jnp.minimum(PoI, self._PoI_max)
 
     def compute_PoI_P2(z2: DeviceArray, x_ph: DeviceArray) -> DeviceArray:
       """
@@ -219,7 +220,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         ratios = ratios.at[l1].set(ratio)
 
       PoI = jnp.max(ratios)
-      return PoI
+      return jnp.minimum(PoI, self._PoI_max)
 
     def true_fn(x_jnt_dot):
       return x_jnt_dot
@@ -268,8 +269,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     z_dot = -D @ z + jnp.hstack((H1z, H2z))
 
     # Computes the attention time derivative.
-    PoI_1 = compute_PoI_P1(z1, x_ph)
-    PoI_2 = compute_PoI_P2(z2, x_ph)
+    PoI_1 = jnp.nan_to_num(compute_PoI_P1(z1, x_ph), nan=1.0)
+    PoI_2 = jnp.nan_to_num(compute_PoI_P2(z2, x_ph), nan=1.0)
 
     att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1)
     att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1)

@@ -292,7 +292,7 @@ for car_R_opn in [1, 2]:
     car_R_cost_subgame.add_cost(car_R_goal_py_cost, "x", car_R_goal_weight)
     car_H_cost_subgame.add_cost(car_H_goal_py_cost, "x", car_H_goal_weight)
 
-    # Sets up ILQSolver.
+    # Sets up ILQSolver and solve the subgame.
     alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)
     # alpha_scaling = np.logspace(-2, -0.04, config.ALPHA_SCALING_NUM)
     solver = ILQSolver(
@@ -306,9 +306,23 @@ for car_R_opn in [1, 2]:
         u_constraints=[u_constraints_car_R, u_constraints_car_H],
         verbose=config.VERBOSE,
     )
-
-    # Solves subgames.
     solver.run()
+    xs = solver._best_operating_point[0]
+    us = np.asarray(solver._best_operating_point[1])
+    Zs = np.asarray(solver._best_operating_point[4])
+    zetas = np.asarray(solver._best_operating_point[5])
+
+    # Solve the subgame for an extended horizon.
+    # solver.reset()
+    # solver._x0 = xs[:, -1]
+    # solver.run()
+    # xs = np.hstack((xs, solver._best_operating_point[0][:, 1:]))
+    # us_new = np.asarray(solver._best_operating_point[1])
+    # us = np.concatenate((us, us_new), axis=2)
+    # Zs_new = np.asarray(solver._best_operating_point[4])
+    # Zs = np.concatenate((Zs[:, :, :, :-1], Zs_new[:, :, :, 1:]), axis=3)
+    # zetas_new = np.asarray(solver._best_operating_point[5])
+    # zetas = np.concatenate((zetas[:, :, :-1], zetas_new[:, :, 1:]), axis=2)
 
     # Saves results.
     if config.SAVE_TRAJ:
@@ -316,35 +330,17 @@ for car_R_opn in [1, 2]:
           os.path.join(
               LOG_DIRECTORY,
               FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_xs.npy'
-          ), solver._best_operating_point[0]
+          ), xs
       )
-      np.save(
-          os.path.join(
-              LOG_DIRECTORY,
-              FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_us.npy'
-          ), solver._best_operating_point[1]
-      )
-      # np.save(
-      #     os.path.join(
-      #         LOG_DIRECTORY,
-      #         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Ps.npy'
-      #     ), solver._best_operating_point[2]
-      # )
-      # np.save(
-      #     os.path.join(
-      #         LOG_DIRECTORY,
-      #         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_as.npy'
-      #     ), solver._best_operating_point[3]
-      # )
       np.save(
           os.path.join(
               LOG_DIRECTORY,
               FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Zs.npy'
-          ), solver._best_operating_point[4]
+          ), Zs
       )
       np.save(
           os.path.join(
               LOG_DIRECTORY,
               FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_zetas.npy'
-          ), solver._best_operating_point[5]
+          ), zetas
       )
