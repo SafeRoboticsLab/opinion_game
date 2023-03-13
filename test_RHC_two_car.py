@@ -14,11 +14,10 @@ from iLQGame.geometry import *
 from iLQGame.constraint import *
 from iLQGame.dynamical_system import *
 from iLQGame.multiplayer_dynamical_system import *
-
 from iLQGame.ilq_solver import ILQSolver
 from iLQGame.player_cost import PlayerCost
-
 from opinion_dynamics.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
+from planning.receding_horizon import RHCPlanner
 
 # Loads the config.
 config = load_config("example_two_car.yaml")
@@ -296,12 +295,14 @@ for car_R_opn in [1, 2]:
     car_R_goal_py_cost = OpnWeightedReferenceDeviationCost(
         reference=car_R_goal_py, dimension=car_R_py_index, is_x=True,
         name="opn_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-        ui_dim=car_R._u_dim, z_idx=car_R_opn, player_id=car_R_player_id
+        ui_dim=car_R._u_dim, z_idx=GiNOD._z_indices_P1, opn_idx=car_R_opn,
+        player_id=car_R_player_id
     )
     car_H_goal_py_cost = OpnWeightedReferenceDeviationCost(
         reference=car_H_goal_py, dimension=car_H_py_index, is_x=True,
         name="opn_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-        ui_dim=car_H._u_dim, z_idx=car_H_opn, player_id=car_H_player_id
+        ui_dim=car_H._u_dim, z_idx=GiNOD._z_indices_P2, opn_idx=car_H_opn,
+        player_id=car_H_player_id
     )
 
     car_R_cost.add_cost(car_R_goal_py_cost, "x", car_R_goal_weight)
@@ -331,7 +332,7 @@ for l1 in [1, 2]:
     xnom_sub = np.load(os.path.join(LOG_DIRECTORY, FILE_NAME_SG + '_xs.npy'))
     xnom[:, l1 - 1, l2 - 1, :] = xnom_sub
 
-_subgame = (Z1, Z2, zeta1, zeta2, xnom)
+subgame = (Z1, Z2, zeta1, zeta2, xnom)
 
 # Sets up ILQSolver for QMDP-style Opinion Game.
 car_R_Ps = jnp.zeros((car_R._u_dim, jnt_sys._x_dim, HORIZON_STEPS))
@@ -356,3 +357,7 @@ solver = ILQSolver(
 
 # RHC planning and simulation.
 N_sim = config.N_SIM
+
+planner = RHCPlanner(solver, N_sim, GiNOD, subgame)
+
+planner.plan(jnt_x0)

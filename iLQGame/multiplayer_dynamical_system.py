@@ -47,7 +47,7 @@ class MultiPlayerDynamicalSystem(object):
     self.jac_f = jit(jacfwd(self.disc_time_dyn, argnums=[0, 1]))
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(self, x: DeviceArray, u_list: list, *args) -> list:
+  def cont_time_dyn(self, x: DeviceArray, u_list: list, args=()) -> list:
     """
     Computes the time derivative of state for a particular state/control.
 
@@ -61,7 +61,7 @@ class MultiPlayerDynamicalSystem(object):
     raise NotImplementedError("cont_time_dyn() has not been implemented.")
 
   @partial(jit, static_argnums=(0,))
-  def disc_time_dyn(self, x0: DeviceArray, u0_list: list, *args) -> list:
+  def disc_time_dyn(self, x0: DeviceArray, u0_list: list, args=()) -> list:
     """
     Computes the one-step evolution of the system in discrete time with Euler
     integration.
@@ -77,8 +77,9 @@ class MultiPlayerDynamicalSystem(object):
     return x0 + self._T * x_dot
 
   @partial(jit, static_argnums=(0,))
-  def linearize_discrete_jitted(self, x0: DeviceArray, u0_list: list,
-                                *args) -> Tuple[DeviceArray, list]:
+  def linearize_discrete_jitted(
+      self, x0: DeviceArray, u0_list: list, args=()
+  ) -> Tuple[DeviceArray, list]:
     """
     Compute the Jacobian linearization of the dynamics for a particular
     state `x0` and control `u0`. Outputs `A` and `B` matrices of a
@@ -164,7 +165,7 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
     ] * self._num_opn_dyn  # opn. dyns. take in the joint state
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(self, x: DeviceArray, u_list: list, *args) -> list:
+  def cont_time_dyn(self, x: DeviceArray, u_list: list, args=()) -> list:
     """
     Computes the time derivative of state for a particular state/control.
 
@@ -181,45 +182,3 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
         for subsys, LMx, u0 in zip(self._subsystems, self._LMx, u_list)
     ]
     return jnp.concatenate(x_dot_list, axis=0)
-
-
-class TwoPlayerUnicycle4D(MultiPlayerDynamicalSystem):
-  """
-  4D unicycle model with disturbance. Dynamics are as follows:
-                            \dot x     = v cos theta + u21
-                            \dot y     = v sin theta + u22
-                            \dot theta = u11
-                            \dot v     = u12
-  """
-
-  def __init__(self, T=0.1):
-    super(TwoPlayerUnicycle4D, self).__init__(4, [2, 2], T)
-
-  def __call__(self, x, u):
-    """
-    Compute the time derivative of state for a particular state/control.
-    NOTE: `x`, and all `u` should be 2D (i.e. column vectors).
-
-    :param x: current state
-    :type x: torch.Tensor or np.array
-    :param u: list of current control inputs for all each player
-    :type u: [torch.Tensor] or [np.array]
-    :return: current time derivative of state
-    :rtype: torch.Tensor or np.array
-    """
-    assert len(u) == self._num_players
-
-    if isinstance(x, np.ndarray):
-      x_dot = np.zeros((self._x_dim, 1))
-      cos = np.cos
-      sin = np.sin
-    else:
-      x_dot = torch.zeros((self._x_dim, 1))
-      cos = torch.cos
-      sin = torch.sin
-
-    x_dot[0, 0] = x[3, 0] * cos(x[2, 0]) + u[1][0, 0]
-    x_dot[1, 0] = x[3, 0] * sin(x[2, 0]) + u[1][1, 0]
-    x_dot[2, 0] = u[0][0, 0]
-    x_dot[3, 0] = u[0][1, 0]
-    return x_dot

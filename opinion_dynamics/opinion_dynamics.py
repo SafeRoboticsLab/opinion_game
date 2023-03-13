@@ -9,7 +9,7 @@ from typing import Tuple
 
 import jax
 from functools import partial
-from jax import jit, jacfwd
+from jax import jit, jacfwd, lax
 from jaxlib.xla_extension import DeviceArray
 import jax.numpy as jnp
 
@@ -27,7 +27,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
   def __init__(
       self, x_indices_P1, x_indices_P2, z_indices_P1, z_indices_P2,
       att_indices_P1, att_indices_P2, z_P1_bias, z_P2_bias, damping_opn=0.0,
-      damping_att=0.0, rho=1.0, T=0.1
+      damping_att=0.0, rho=1.0, T=0.1, is_QMDP=False
   ):
     """
     Initializer.
@@ -79,6 +79,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         + self._num_att_P2
     )
 
+    self._is_QMDP = is_QMDP
+
     super(NonlinearOpinionDynamicsTwoPlayer, self).__init__(self._x_dim, 0, T)
 
   @partial(jit, static_argnums=(0,))
@@ -86,7 +88,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       self,
       x: DeviceArray,
       ctrl=None,
-      *args,
+      subgame: Tuple = (),
+      k: int = 0,
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -98,8 +101,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           For each opinion dynamics, their state := (z, u) where z is the
           opinion state and u is the attention parameter
         ctrl (DeviceArray): None
+        k (int): time
 
-        *args include:
+        subgame (Tuple) include:
         Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
           (subgame cost matrices)
         Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
@@ -217,13 +221,13 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       PoI = jnp.max(ratios)
       return PoI
 
-    Z_P1 = args[0]
-    Z_P2 = args[1]
-    zeta_P1 = args[2]
-    zeta_P2 = args[3]
-    x_ph_nom = args[4]
-    znom_P1 = args[5]
-    znom_P2 = args[6]
+    def true_fn(x_jnt_dot):
+      return x_jnt_dot
+
+    def false_fn(x_jnt_dot):
+      return jnp.zeros_like(x_jnt_dot)
+
+    Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2 = subgame
 
     # State variables.
     x_ph1 = x[self._x_indices_P1]
@@ -248,7 +252,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     H1 = jax.nn.standardize(H1)  # Avoid large numbers.
     H2 = jax.nn.standardize(H2)  # Avoid large numbers.
-    H = jnp.vstack((H1, H2))
+    # H = jnp.vstack((H1, H2))
 
     # Computes the opinion state time derivative.
     att_1_vec = att1 * jnp.ones((self._num_opn_P1,))
@@ -270,14 +274,22 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1)
     att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1)
 
-    return jnp.hstack((z_dot, att1_dot, att2_dot)), H, PoI_1, PoI_2
+    # Joint state time derivative.
+    x_jnt_dot = jnp.hstack((z_dot, att1_dot, att2_dot))
+
+    if self._is_QMDP:
+      return lax.cond(k == 0, true_fn, false_fn, x_jnt_dot)
+
+    else:
+      # return x_jnt_dot, H, PoI_1, PoI_2
+      return x_jnt_dot
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn_fixed_att(
       self,
       x: DeviceArray,
       ctrl=None,
-      *args,
+      subgame: Tuple = (),
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -290,7 +302,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           opinion state and u is the attention parameter
         ctrl (DeviceArray): None
 
-        *args include:
+        subgame include:
         Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
           (subgame cost matrices)
         Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
@@ -342,15 +354,10 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
-    Z_P1 = args[0]
-    Z_P2 = args[1]
-    zeta_P1 = args[2]
-    zeta_P2 = args[3]
-    x_ph_nom = args[4]
-    znom_P1 = args[5]
-    znom_P2 = args[6]
-    att_P1 = args[7]
-    att_P2 = args[8]
+    (
+        Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2, att_P1,
+        att_P2
+    ) = subgame
 
     # State variables.
     x_ph1 = x[self._x_indices_P1]

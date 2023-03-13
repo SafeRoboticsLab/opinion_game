@@ -529,7 +529,8 @@ class OpnWeightedReferenceDeviationCost(Cost):
 
   def __init__(
       self, reference, dimension=None, is_x=False, name="", horizon=None,
-      x_dim=None, ui_dim=None, z_idx: int = None, player_id: int = None
+      x_dim=None, ui_dim=None, z_idx: int = None, opn_idx: int = None,
+      player_id: int = None
   ):
     """
     Opinion-weighted reference trajectory following cost.
@@ -540,14 +541,14 @@ class OpnWeightedReferenceDeviationCost(Cost):
     self._dimension = dimension
     self._is_x = is_x
     self._z_idx = z_idx
+    self._opn_idx = opn_idx
     self._player_id = player_id
     super(OpnWeightedReferenceDeviationCost,
           self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
   def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0,
-      zi: DeviceArray = None
+      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
   ) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
@@ -556,15 +557,16 @@ class OpnWeightedReferenceDeviationCost(Cost):
         x (DeviceArray, optional): concatenated state of all subsystems (nx,)
         ui (DeviceArray, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
-        z (DeviceArray, optional): opinion of the subsystem (nzi,)
 
     Returns:
         DeviceArray: scalar value of cost (scalar)
     """
 
-    print("self._z = ", self._z)
+    # This player's opinion state vector.
+    zi = x[self._z_idx]
 
-    weight_z = softmax(zi, self._z_idx)
+    # This player's option.
+    weight_z = softmax(zi, self._opn_idx)
 
     if self._is_x:
       return weight_z * (x[self._dimension] - self.reference)**2
@@ -788,75 +790,3 @@ class BoxInputConstraintCost(Cost):
     c_ub = self._q1 * (jnp.exp(self._q2 * margin_ub) - 1.)
     c_lb = self._q1 * (jnp.exp(self._q2 * margin_lb) - 1.)
     return c_lb + c_ub
-
-
-class OpinionGuidedCostCorridorTwoPlayer(Cost):
-
-  def __init__(
-      self, indices_ego, indices_opp, z_index, py_offset, reverse_px=False,
-      name="", horizon=None, x_dim=None, ui_dim=None
-  ):
-    """
-    Opinion-guided cost to incentivize the agent to enter a halfspace
-    determined by the value of the opinion state (z > 0: moves left, i.e.
-    positive y-axis)
-
-    For jit compatibility, number of players is hardcoded to 2 to avoid loops.
-    """
-    self._indices_ego = indices_ego
-    self._indices_opp = indices_opp
-    self._z_index = z_index
-    self._py_offset = py_offset
-    if reverse_px:
-      self._px_sign = -1.0
-    else:
-      self._px_sign = 1.0
-    super(OpinionGuidedCostCorridorTwoPlayer,
-          self).__init__(name, horizon, x_dim, ui_dim)
-
-  @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
-    """
-    Evaluates this cost function on the given input state and/or control.
-
-    Args:
-        x (DeviceArray): concatenated state vector of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
-        k (int, optional): time step. Defaults to 0.
-
-    Returns:
-        DeviceArray: scalar value of cost (scalar)
-    """
-
-    def true_fn():
-      # Ego has already passed the opponent.
-      return 0.
-
-    def false_fn():
-      # Ego has not yet passed the opponent.
-      py_offset = jnp.sign(z) * self._py_offset
-
-      py_diff = py_ego - (py_ego+py_opp) / 2.0  # This works.
-      # py_diff = (py_ego-py_opp) / 2.0  # This sometimes doesn't work.
-      total_reward = -(z * (py_diff-py_offset))**3
-
-      # total_reward = -jnp.maximum(
-      #     jnp.sign(z * (py_ego-py_mid-py_offset)), 0.0
-      # )
-      total_cost = -total_reward
-      return total_cost
-
-    px_ego_index, py_ego_index = self._indices_ego
-    px_opp_index, py_opp_index = self._indices_opp
-
-    px_ego = x[px_ego_index]
-    py_ego = x[py_ego_index]
-    px_opp = x[px_opp_index]
-    py_opp = x[py_opp_index]
-    z = x[self._z_index]
-
-    return lax.cond(
-        self._px_sign * px_ego > self._px_sign * px_opp, true_fn, false_fn
-    )

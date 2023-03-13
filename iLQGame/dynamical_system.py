@@ -13,7 +13,7 @@ TODO:
 from typing import Tuple
 
 from functools import partial
-from jax import jit, lax
+from jax import jit
 from jaxlib.xla_extension import DeviceArray
 import jax.numpy as jnp
 
@@ -58,7 +58,7 @@ class DynamicalSystem(object):
 
   @partial(jit, static_argnums=(0,))
   def disc_time_dyn(
-      self, x0: DeviceArray, u0: DeviceArray, *args
+      self, x0: DeviceArray, u0: DeviceArray, args=()
   ) -> DeviceArray:
     """
     Computes the one-step evolution of the system in discrete time with Euler
@@ -75,8 +75,9 @@ class DynamicalSystem(object):
     return x0 + self._T * x_dot
 
   @partial(jit, static_argnums=(0,))
-  def linearize_discrete_jitted(self, x0: DeviceArray, u0: DeviceArray,
-                                *args) -> Tuple[DeviceArray, DeviceArray]:
+  def linearize_discrete_jitted(
+      self, x0: DeviceArray, u0: DeviceArray, args=()
+  ) -> Tuple[DeviceArray, DeviceArray]:
     """
     Compute the Jacobian linearization of the dynamics for a particular
     state `x0` and control `u0`. Outputs `A` and `B` matrices of a

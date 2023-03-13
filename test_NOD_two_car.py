@@ -78,6 +78,7 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     damping_opn=0.0,
     damping_att=1.0,
     rho=0.7,
+    is_QMDP=False,
 )
 
 for k in range(N):
@@ -96,13 +97,19 @@ for k in range(N):
 
   x_joint_k = np.hstack((xnom_k[:, car_R_opn - 1, car_H_opn - 1], z[:, k]))
 
-  z_dot_k, H_k, PoI1_k, PoI2_k = GiNOD.cont_time_dyn(
-      x_joint_k, None, Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k
-  )
+  subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k)
 
-  z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
-  Hs[:, :, k] = H_k
-  PoI[:, k] = np.array((PoI1_k, PoI2_k))
+  try:
+    z_dot_k, H_k, PoI1_k, PoI2_k = GiNOD.cont_time_dyn(
+        x_joint_k, None, subgame_k, k
+    )
+    z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
+    Hs[:, :, k] = H_k
+    PoI[:, k] = np.array((PoI1_k, PoI2_k))
+
+  except:
+    z_dot_k = GiNOD.cont_time_dyn(x_joint_k, None, subgame_k, k)
+    z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
 
   print(z[:, k])
   # print(PoI1_k, PoI2_k)
@@ -123,56 +130,57 @@ exit()
 #     ), Hs
 # )
 
-# # ------ Fixed attention ------
-# # Constructs a Game-induced NOD and simulates it along subgame trajectories.
-# Hs = np.zeros((4, 4, N + 1))
+# ------ Fixed attention ------
+# Constructs a Game-induced NOD and simulates it along subgame trajectories.
+Hs = np.zeros((4, 4, N + 1))
 
-# z = np.zeros((4, N + 1))
+z = np.zeros((4, N + 1))
 
-# car_R_opn = 1
-# car_H_opn = 1
+car_R_opn = 1
+car_H_opn = 1
 
-# z_bias = 1e-3 * np.ones((2,))
+z_bias = 1e-3 * np.ones((2,))
 
-# GiNOD = NonlinearOpinionDynamicsTwoPlayer(
-#     x_indices_P1=np.array((0, 1, 2, 3)),
-#     x_indices_P2=np.array((4, 5, 6, 7)),
-#     z_indices_P1=np.array((8, 9)),
-#     z_indices_P2=np.array((10, 11)),
-#     att_indices_P1=np.array(()),
-#     att_indices_P2=np.array(()),
-#     z_P1_bias=z_bias,
-#     z_P2_bias=z_bias,
-#     T=TIME_RES,
-#     damping_opn=0.0,
-# )
+GiNOD = NonlinearOpinionDynamicsTwoPlayer(
+    x_indices_P1=np.array((0, 1, 2, 3)),
+    x_indices_P2=np.array((4, 5, 6, 7)),
+    z_indices_P1=np.array((8, 9)),
+    z_indices_P2=np.array((10, 11)),
+    att_indices_P1=np.array(()),
+    att_indices_P2=np.array(()),
+    z_P1_bias=z_bias,
+    z_P2_bias=z_bias,
+    T=TIME_RES,
+    damping_opn=0.0,
+)
 
-# for k in range(N):
-#   Z1_k = Z1[:, :, :, :, k]
-#   Z2_k = Z2[:, :, :, :, k]
-#   zeta1_k = zeta1[:, :, :, k]
-#   zeta2_k = zeta2[:, :, :, k]
-#   xnom_k = xnom[:, :, :, k]
+for k in range(N):
+  Z1_k = Z1[:, :, :, :, k]
+  Z2_k = Z2[:, :, :, :, k]
+  zeta1_k = zeta1[:, :, :, k]
+  zeta2_k = zeta2[:, :, :, k]
+  xnom_k = xnom[:, :, :, k]
 
-#   if k == 0:
-#     znom1_k = np.zeros((2,))
-#     znom2_k = np.zeros((2,))
-#   else:
-#     znom1_k = z[:2, k - 1]
-#     znom2_k = z[2:, k - 1]
+  if k == 0:
+    znom1_k = np.zeros((2,))
+    znom2_k = np.zeros((2,))
+  else:
+    znom1_k = z[:2, k - 1]
+    znom2_k = z[2:, k - 1]
 
-#   x_joint_k = np.hstack((xnom_k[:, car_R_opn - 1, car_H_opn - 1], z[:, k]))
+  x_joint_k = np.hstack((xnom_k[:, car_R_opn - 1, car_H_opn - 1], z[:, k]))
 
-#   z_dot_k, H_k = GiNOD.cont_time_dyn_fixed_att(
-#       x_joint_k, None, Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k,
-#       2.0, 2.0
-#   )
+  subgame_k = (
+      Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k, 2.0, 2.0
+  )
 
-#   z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
+  z_dot_k, H_k = GiNOD.cont_time_dyn_fixed_att(x_joint_k, None, subgame_k)
 
-#   Hs[:, :, k] = H_k
+  z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
 
-#   print(z[:, k])
+  Hs[:, :, k] = H_k
+
+  print(z[:, k])
 
 # np.save(
 #     os.path.join(

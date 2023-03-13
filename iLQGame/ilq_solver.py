@@ -36,6 +36,9 @@ class ILQSolver(object):
     self._x0 = x0
     self._Ps = Ps
     self._alphas = alphas
+    self._x0_init = x0
+    self._Ps_init = Ps
+    self._alphas_init = alphas
     self._u_constraints = u_constraints
     self._horizon = Ps[0].shape[2]
     self._num_players = dynamics._num_players
@@ -146,13 +149,16 @@ class ILQSolver(object):
 
       iteration += 1
 
-  def run_OG_two_player(self, *args):
+  def run_OG_two_player(self, x0, subgame):
     """
     Runs the iLQ-OG algorithm.
-
-    *args include subgame results.
     """
     iteration = 0
+
+    # Initialization.
+    self._x0 = x0
+    self._Ps = self._Ps_init
+    self._alphas = self._alphas_init
 
     while (iteration <= self._max_iter):  #and (not self._is_converged_cost()):
 
@@ -172,8 +178,9 @@ class ILQSolver(object):
         current_alphas = [
             (alpha_vec * alpha_scaling) for alpha_vec in current_alphas
         ]
-        xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point(
-            current_xs, current_us, current_Ps, current_alphas
+
+        xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point_OG(
+            current_xs, current_us, current_Ps, current_alphas, subgame
         )
         total_cost_alpha = sum([jnp.sum(costis) for costis in costs_alpha])
 
@@ -188,9 +195,11 @@ class ILQSolver(object):
 
       # Linearizes about this operating point.
       tt = time.time()
-      As, Bs_list = self._linearize_dynamics(xs, us_list, args)
+      As, Bs_list = self._linearize_dynamics(xs, us_list, subgame)
       if self._verbose or iteration == 0:
         print("- Linearization computing time: ", time.time() - tt)
+
+      print(As)
 
       exit()
 
@@ -320,7 +329,67 @@ class ILQSolver(object):
         us_list[ii] = us_list[ii].at[:, k].set(uii)
 
       # Computes the next state for the joint system.
-      xs = xs.at[:, k + 1].set(self._dynamics.disc_time_dyn(xs[:, k], us_k))
+      x_next = self._dynamics.disc_time_dyn(xs[:, k], us_k)
+      xs = xs.at[:, k + 1].set(x_next)
+
+    xs = xs[:, :self._horizon]
+
+    # Evaluates costs.
+    costs_list = [[] for _ in range(self._num_players)]
+    for ii in range(self._num_players):
+      costs_list[ii] = self._player_costs[ii].get_cost(xs, us_list[ii])
+
+    return xs, us_list, costs_list
+
+  @partial(jit, static_argnums=(0,))
+  def _compute_operating_point_OG(
+      self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list,
+      subgame: Tuple
+  ) -> Tuple[DeviceArray, list]:
+    """
+    Computes current operating point by propagating through dynamics.
+
+    Args:
+        current_xs (DeviceArray): states (nx, N)
+        current_us (list of DeviceArray): controls [(nui, N)]
+        Ps (list of DeviceArray)
+        alphas (list of DeviceArray)
+        subgame (Tuple)
+
+    Returns:
+        DeviceArray: states (nx, N)
+        [DeviceArray]: list of controls for each player [(nui, N)]
+    """
+    x_dim = self._dynamics._x_dim
+    u_dims = self._dynamics._u_dims
+
+    # Computes the joint state trajectory.
+    xs = jnp.zeros((x_dim, self._horizon))
+    xs = xs.at[:, 0].set(self._x0)
+    us_list = [jnp.zeros((ui_dim, self._horizon)) for ui_dim in u_dims]
+
+    # NOTE: Here we have to index on the list for disc_time_dyn().
+    # So we cannot use fori_loop.
+    for k in range(self._horizon):
+
+      x_ref = current_xs[:, k]
+
+      # Computes the control policy for each player.
+      us_k = []
+      for ii in range(self._num_players):
+        # Computes the feedback strategy.
+        uii_ref = current_us[ii][:, k]
+        uii = uii_ref - Ps[ii][:, :, k] @ (xs[:, k] - x_ref) - alphas[ii][:, k]
+
+        # Project to the control bound.
+        uii = self._u_constraints[ii].clip(uii)
+
+        us_k.append(uii)
+        us_list[ii] = us_list[ii].at[:, k].set(uii)
+
+      # Computes the next state for the joint system.
+      x_next = self._dynamics.disc_time_dyn(xs[:, k], us_k, subgame)
+      xs = xs.at[:, k + 1].set(x_next)
 
     xs = xs[:, :self._horizon]
 
