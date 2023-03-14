@@ -253,7 +253,6 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     H1 = jax.nn.standardize(H1)  # Avoid large numbers.
     H2 = jax.nn.standardize(H2)  # Avoid large numbers.
-    # H = jnp.vstack((H1, H2))
 
     # Computes the opinion state time derivative.
     att_1_vec = att1 * jnp.ones((self._num_opn_P1,))
@@ -282,8 +281,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       return lax.cond(k == 0, true_fn, false_fn, x_jnt_dot)
 
     else:
-      # return x_jnt_dot, H, PoI_1, PoI_2
-      return x_jnt_dot
+      H = jnp.vstack((H1, H2))
+      return x_jnt_dot, H, PoI_1, PoI_2
+      # return x_jnt_dot
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn_fixed_att(

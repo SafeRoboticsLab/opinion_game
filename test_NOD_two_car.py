@@ -64,8 +64,8 @@ z = np.zeros((6, N + 1))
 Hs = np.zeros((4, 4, N))
 PoI = np.zeros((2, N))
 
-car_R_opn = 2
-car_H_opn = 2
+car_R_opn = 1
+car_H_opn = 1
 
 z_bias = 1e-3 * np.ones((2,))
 
@@ -118,22 +118,21 @@ for k in range(N):
   print(z[:, k])
   # print(PoI1_k, PoI2_k)
 
+np.save(
+    os.path.join(
+        LOG_DIRECTORY,
+        FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_opn_demo.npy'
+    ), z
+)
+
+np.save(
+    os.path.join(
+        LOG_DIRECTORY,
+        FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Hs_demo.npy'
+    ), Hs
+)
+
 exit()
-
-# np.save(
-#     os.path.join(
-#         LOG_DIRECTORY,
-#         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_opn.npy'
-#     ), z
-# )
-
-# np.save(
-#     os.path.join(
-#         LOG_DIRECTORY,
-#         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Hs.npy'
-#     ), Hs
-# )
-
 # ------ Fixed attention ------
 # Constructs a Game-induced NOD and simulates it along subgame trajectories.
 Hs = np.zeros((4, 4, N + 1))
