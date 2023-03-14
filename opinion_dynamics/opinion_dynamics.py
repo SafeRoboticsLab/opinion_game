@@ -89,8 +89,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       self,
       x: DeviceArray,
       ctrl=None,
-      subgame: Tuple = (),
       k: int = 0,
+      subgame: Tuple = (),
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.

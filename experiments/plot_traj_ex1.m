@@ -15,10 +15,10 @@ XH_in = xs(5:8, :);
 % Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 10;
+option.t_skip     = 8;
 option.N_interp   = 1;
 option.t_start    = [];
-option.t_end      = [];
+option.t_end      = 90;
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;

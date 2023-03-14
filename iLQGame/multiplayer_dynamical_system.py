@@ -8,17 +8,13 @@ Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
 TODO:
   - Rewrite comments
 """
-import torch
 import numpy as np
 from typing import Tuple
-from scipy.linalg import block_diag
 
 from functools import partial
 from jax import jit, jacfwd
 from jaxlib.xla_extension import DeviceArray
 import jax.numpy as jnp
-
-from iLQGame.dynamical_system import Car4D
 
 
 class MultiPlayerDynamicalSystem(object):
@@ -47,7 +43,9 @@ class MultiPlayerDynamicalSystem(object):
     self.jac_f = jit(jacfwd(self.disc_time_dyn, argnums=[0, 1]))
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(self, x: DeviceArray, u_list: list, args=()) -> list:
+  def cont_time_dyn(
+      self, x: DeviceArray, u_list: list, k: int = 0, args=()
+  ) -> list:
     """
     Computes the time derivative of state for a particular state/control.
 
@@ -61,7 +59,9 @@ class MultiPlayerDynamicalSystem(object):
     raise NotImplementedError("cont_time_dyn() has not been implemented.")
 
   @partial(jit, static_argnums=(0,))
-  def disc_time_dyn(self, x0: DeviceArray, u0_list: list, args=()) -> list:
+  def disc_time_dyn(
+      self, x0: DeviceArray, u0_list: list, k: int = 0, args=()
+  ) -> list:
     """
     Computes the one-step evolution of the system in discrete time with Euler
     integration.
@@ -73,12 +73,12 @@ class MultiPlayerDynamicalSystem(object):
     Returns:
         list of DeviceArray: list of next states [(nx_0,), (nx_1,), ...]
     """
-    x_dot = self.cont_time_dyn(x0, u0_list, args)
+    x_dot = self.cont_time_dyn(x0, u0_list, k, args)
     return x0 + self._T * x_dot
 
   @partial(jit, static_argnums=(0,))
   def linearize_discrete_jitted(
-      self, x0: DeviceArray, u0_list: list, args=()
+      self, x0: DeviceArray, u0_list: list, k: int = 0, args=()
   ) -> Tuple[DeviceArray, list]:
     """
     Compute the Jacobian linearization of the dynamics for a particular
@@ -94,7 +94,7 @@ class MultiPlayerDynamicalSystem(object):
         DeviceArray: the Jacobian of next state w.r.t. x0.
         list of DeviceArray: the Jacobian of next state w.r.t. u0_i.
     """
-    A_disc, B_disc = self.jac_f(x0, u0_list, args)
+    A_disc, B_disc = self.jac_f(x0, u0_list, k, args)
     return A_disc, B_disc
 
 
@@ -165,7 +165,9 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
     ] * self._num_opn_dyn  # opn. dyns. take in the joint state
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(self, x: DeviceArray, u_list: list, args=()) -> list:
+  def cont_time_dyn(
+      self, x: DeviceArray, u_list: list, k: int = 0, args=()
+  ) -> list:
     """
     Computes the time derivative of state for a particular state/control.
 
@@ -178,7 +180,7 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
     """
     u_list += [None] * self._num_opn_dyn
     x_dot_list = [
-        subsys.cont_time_dyn(LMx @ x, u0, args)
+        subsys.cont_time_dyn(LMx @ x, u0, k, args)
         for subsys, LMx, u0 in zip(self._subsystems, self._LMx, u_list)
     ]
     return jnp.concatenate(x_dot_list, axis=0)

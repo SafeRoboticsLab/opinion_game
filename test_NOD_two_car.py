@@ -29,7 +29,7 @@ TIME_RES = config.TIME_RES  # s
 HORIZON_STEPS = int(TIME_HORIZON / TIME_RES)
 LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
-N = int(config.TIME_HORIZON / config.TIME_RES)
+N = 75
 
 # Loads subgame results.
 Z1 = np.zeros((8, 8, 2, 2, N + 1))
@@ -105,14 +105,14 @@ for k in range(N):
 
   try:
     z_dot_k, H_k, PoI1_k, PoI2_k = GiNOD.cont_time_dyn(
-        x_joint_k, None, subgame_k, k
+        x_joint_k, None, k, subgame_k
     )
     z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
     Hs[:, :, k] = H_k
     PoI[:, k] = np.array((PoI1_k, PoI2_k))
 
   except:
-    z_dot_k = GiNOD.cont_time_dyn(x_joint_k, None, subgame_k, k)
+    z_dot_k = GiNOD.cont_time_dyn(x_joint_k, None, k, subgame_k)
     z[:, k + 1] = z[:, k] + TIME_RES*z_dot_k
 
   print(z[:, k])

@@ -41,7 +41,7 @@ class DynamicalSystem(object):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self, x0: DeviceArray, u0: DeviceArray, *args
+      self, x0: DeviceArray, u0: DeviceArray, k: int = 0, *args
   ) -> DeviceArray:
     """
     Abstract method.
@@ -58,7 +58,7 @@ class DynamicalSystem(object):
 
   @partial(jit, static_argnums=(0,))
   def disc_time_dyn(
-      self, x0: DeviceArray, u0: DeviceArray, args=()
+      self, x0: DeviceArray, u0: DeviceArray, k: int = 0, args=()
   ) -> DeviceArray:
     """
     Computes the one-step evolution of the system in discrete time with Euler
@@ -71,12 +71,12 @@ class DynamicalSystem(object):
     Returns:
         DeviceArray: next state (nx,)
     """
-    x_dot = self.cont_time_dyn(x0, u0, args)
+    x_dot = self.cont_time_dyn(x0, u0, k, args)
     return x0 + self._T * x_dot
 
   @partial(jit, static_argnums=(0,))
   def linearize_discrete_jitted(
-      self, x0: DeviceArray, u0: DeviceArray, args=()
+      self, x0: DeviceArray, u0: DeviceArray, k: int = 0, args=()
   ) -> Tuple[DeviceArray, DeviceArray]:
     """
     Compute the Jacobian linearization of the dynamics for a particular
@@ -92,7 +92,7 @@ class DynamicalSystem(object):
         DeviceArray: the Jacobian of next state w.r.t. the current state.
         DeviceArray: the Jacobian of next state w.r.t. the current control.
     """
-    A_disc, B_disc = self.jac_f(x0, u0, args)
+    A_disc, B_disc = self.jac_f(x0, u0, k, args)
     return A_disc, B_disc
 
 
@@ -110,7 +110,7 @@ class Unicycle4D(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, *args
+      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -143,7 +143,7 @@ class PointMass2D(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, *args
+      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -197,7 +197,7 @@ class Bicycle4D(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, *args
+      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -234,7 +234,7 @@ class Car4D(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, *args
+      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -272,7 +272,7 @@ class Car5D(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, *args
+      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.

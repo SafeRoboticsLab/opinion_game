@@ -398,7 +398,7 @@ class ILQSolver(object):
         us_list[ii] = us_list[ii].at[:, k].set(uii)
 
       # Computes the next state for the joint system.
-      x_next = self._dynamics.disc_time_dyn(xs[:, k], us_k, subgame)
+      x_next = self._dynamics.disc_time_dyn(xs[:, k], us_k, k, subgame)
       xs = xs.at[:, k + 1].set(x_next)
 
     xs = xs[:, :self._horizon]
@@ -433,7 +433,7 @@ class ILQSolver(object):
     # So we cannot use fori_loop.
     for k in range(self._horizon):
       A, B = self._dynamics.linearize_discrete_jitted(
-          xs[:, k], [us_list[ii][:, k] for ii in range(self._num_players)],
+          xs[:, k], [us_list[ii][:, k] for ii in range(self._num_players)], k,
           args
       )
       As = As.at[:, :, k].set(A)

@@ -55,6 +55,7 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     damping_opn=0.1,
     damping_att=0.5,
     rho=1.0,
+    is_QMDP=True,
 )
 
 # Defines the OPS (joint opinion-physical state system)
@@ -211,7 +212,7 @@ proximity_cost_RH = ProductStateProximityCostTwoPlayer([
 #   -> Robot
 car_R_cost = PlayerCost()
 car_R_cost.add_cost(car_R_goal_psi_cost, "x", 1.0)
-car_R_cost.add_cost(car_R_goal_vel_cost, "x", 1.0)
+car_R_cost.add_cost(car_R_goal_vel_cost, "x", 10.0)
 
 car_R_cost.add_cost(car_R_lower_road_cost, "x", 50.0)
 car_R_cost.add_cost(car_R_upper_road_cost, "x", 50.0)
@@ -228,7 +229,7 @@ car_R_cost.add_cost(car_R_a_constr_cost, car_R_player_id, 50.0)
 #   -> Human
 car_H_cost = PlayerCost()
 car_H_cost.add_cost(car_H_goal_psi_cost, "x", 1.0)
-car_H_cost.add_cost(car_H_goal_vel_cost, "x", 1.0)
+car_H_cost.add_cost(car_H_goal_vel_cost, "x", 10.0)
 
 car_H_cost.add_cost(car_H_lower_road_cost, "x", 50.0)
 car_H_cost.add_cost(car_H_upper_road_cost, "x", 50.0)

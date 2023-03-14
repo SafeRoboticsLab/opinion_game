@@ -59,8 +59,8 @@ class RHCPlanner(object):
           xnom_k[:, l1 - 1, l2 - 1] = self._xnom[:, l1 - 1, l2 - 1, idx_k]
 
       # Assigns warmstart strategies.
-      Ps_warmstart = self._ILQSolver._Ps
-      alphas_warmstart = self._ILQSolver._alphas
+      Ps_warmstart = None  #self._ILQSolver._Ps
+      alphas_warmstart = None  #self._ILQSolver._alphas
 
       # Solves iLQ-OG.
       z1_k = x[self._GiNOD._z_indices_P1]
@@ -80,7 +80,7 @@ class RHCPlanner(object):
 
       # Stores results.
       z = np.hstack((z1_k, z2_k, att1_k, att2_k))
-      z_dot_k = self._GiNOD.cont_time_dyn(x, None, subgame_k)
+      z_dot_k = self._GiNOD.cont_time_dyn(x, None, 0, subgame_k)
       z = z + self._GiNOD._T * z_dot_k
       x_ph = np.hstack(
           (x_ILQ[self._GiNOD._x_indices_P1], x_ILQ[self._GiNOD._x_indices_P2])
