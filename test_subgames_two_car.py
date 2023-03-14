@@ -3,7 +3,6 @@ Opinion Game: Two car toll station example.
 """
 
 import os
-import time
 import numpy as np
 import jax.numpy as jnp
 from copy import deepcopy
@@ -54,7 +53,6 @@ car_H_x0 = jnp.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])
 jnt_x0 = jnp.concatenate([car_R_x0, car_H_x0], axis=0)
 
 # Defines costs.
-
 #   -> Car R
 car_R_px_index = 0
 car_R_py_index = 1
@@ -187,7 +185,6 @@ car_R_cost = PlayerCost()
 car_R_cost.add_cost(car_R_goal_psi_cost, "x", 1.0)
 car_R_cost.add_cost(car_R_goal_vel_cost, "x", 1.0)
 
-# car_R_cost.add_cost(car_R_maxv_cost, "x", 10.0)
 car_R_cost.add_cost(car_R_lower_road_cost, "x", 50.0)
 car_R_cost.add_cost(car_R_upper_road_cost, "x", 50.0)
 car_R_cost.add_cost(car_R_min_vel_cost, "x", 50.0)
@@ -205,7 +202,6 @@ car_H_cost = PlayerCost()
 car_H_cost.add_cost(car_H_goal_psi_cost, "x", 1.0)
 car_H_cost.add_cost(car_H_goal_vel_cost, "x", 1.0)
 
-# car_H_cost.add_cost(car_H_maxv_cost, "x", 10.0)
 car_H_cost.add_cost(car_H_lower_road_cost, "x", 50.0)
 car_H_cost.add_cost(car_H_upper_road_cost, "x", 50.0)
 car_H_cost.add_cost(car_H_min_vel_cost, "x", 50.0)
@@ -293,12 +289,11 @@ for car_R_opn in [1, 2]:
     car_H_cost_subgame.add_cost(car_H_goal_py_cost, "x", car_H_goal_weight)
 
     # Sets up ILQSolver and solve the subgame.
-    alpha_scaling = np.linspace(0.01, 0.5, config.ALPHA_SCALING_NUM)
+    alpha_scaling = np.linspace(0.01, 2.0, config.ALPHA_SCALING_NUM)
     # alpha_scaling = np.logspace(-2, -0.04, config.ALPHA_SCALING_NUM)
     solver = ILQSolver(
         jnt_sys,
         [car_R_cost_subgame, car_H_cost_subgame],
-        jnt_x0,
         [car_R_Ps, car_H_Ps],
         [car_R_alphas, car_H_alphas],
         alpha_scaling,
@@ -306,23 +301,8 @@ for car_R_opn in [1, 2]:
         u_constraints=[u_constraints_car_R, u_constraints_car_H],
         verbose=config.VERBOSE,
     )
-    solver.run()
+    solver.run(jnt_x0)
     xs = solver._best_operating_point[0]
-    us = np.asarray(solver._best_operating_point[1])
-    Zs = np.asarray(solver._best_operating_point[4])
-    zetas = np.asarray(solver._best_operating_point[5])
-
-    # Solve the subgame for an extended horizon.
-    # solver.reset()
-    # solver._x0 = xs[:, -1]
-    # solver.run()
-    # xs = np.hstack((xs, solver._best_operating_point[0][:, 1:]))
-    # us_new = np.asarray(solver._best_operating_point[1])
-    # us = np.concatenate((us, us_new), axis=2)
-    # Zs_new = np.asarray(solver._best_operating_point[4])
-    # Zs = np.concatenate((Zs[:, :, :, :-1], Zs_new[:, :, :, 1:]), axis=3)
-    # zetas_new = np.asarray(solver._best_operating_point[5])
-    # zetas = np.concatenate((zetas[:, :, :-1], zetas_new[:, :, 1:]), axis=2)
 
     # Saves results.
     if config.SAVE_TRAJ:
@@ -331,16 +311,4 @@ for car_R_opn in [1, 2]:
               LOG_DIRECTORY,
               FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_xs.npy'
           ), xs
-      )
-      np.save(
-          os.path.join(
-              LOG_DIRECTORY,
-              FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Zs.npy'
-          ), Zs
-      )
-      np.save(
-          os.path.join(
-              LOG_DIRECTORY,
-              FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_zetas.npy'
-          ), zetas
       )
