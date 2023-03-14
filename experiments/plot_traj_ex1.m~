@@ -254,9 +254,11 @@ end
 
 return
 
-%% Plot demo opinions and Hs
+%% Plot demo opinions
 zs = double(readNPY(strcat('two_car/two_car_11_opn_demo.npy')));
 Hs = double(readNPY(strcat('two_car/two_car_11_Hs_demo.npy')));
+
+t_end = 74;
 
 % P1's opinion
 sigma_z1 = softmax(zs(1:2, 1:t_end));
@@ -292,12 +294,15 @@ xlabel('Time step', 'Interpreter','latex')
 ylabel('$\lambda^1$', 'Interpreter','latex')
 
 % P2's attention
-att2 = zs(6, 1:option.t_end);
+att2 = zs(6, 1:t_end);
 figure('Color','white')
 set(gca,'FontSize',fs)
 hold on
 plot(att2, 'LineWidth', 2)
 xlabel('Time step', 'Interpreter','latex')
 ylabel('$\lambda^2$', 'Interpreter','latex')
+
+
+%% Plot Hs color map
 
 
