@@ -132,6 +132,7 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
     # Creates lifting matrices LMx_i for subsystem i such that LMx_i @ x = xi.
     _split_index = np.hstack((0, np.cumsum(np.asarray(self._x_dims))))
     self._LMx = [np.zeros((xi_dim, self._x_dim)) for xi_dim in self._x_dims]
+
     for i in range(len(self._x_dims)):
       self._LMx[i][:, _split_index[i]:_split_index[i + 1]] = np.eye(
           self._x_dims[i]

@@ -77,6 +77,9 @@ class RHCPlanner(object):
       print("[RHC] iLQ-OG solving time: ", time.time() - t_start, "\n")
 
       x_ILQ = self._ILQSolver._best_operating_point[0][:, 1]
+      # print(self._ILQSolver._best_operating_point[0][:, 8:12])
+
+      # **** THERE IS A BUG ****
 
       # Stores results.
       z = np.hstack((z1_k, z2_k, att1_k, att2_k))

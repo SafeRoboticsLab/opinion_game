@@ -105,16 +105,14 @@ car_R_maxv_cost = MaxVelCostPxDependent(
 )  # Penalizes car speed above a threshold near the toll station.
 
 car_R_lower_road_cost = SemiquadraticCost(
-    dimension=car_R_py_index,
-    threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD * 0.8, oriented_right=False,
-    is_x=True, name="car_R_lower_road_cost", horizon=HORIZON_STEPS,
-    x_dim=x_dim, ui_dim=car_R._u_dim
+    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD,
+    oriented_right=False, is_x=True, name="car_R_lower_road_cost",
+    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )
 car_R_upper_road_cost = SemiquadraticCost(
-    dimension=car_R_py_index,
-    threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD * 0.8, oriented_right=True,
-    is_x=True, name="car_R_upper_road_cost", horizon=HORIZON_STEPS,
-    x_dim=x_dim, ui_dim=car_R._u_dim
+    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD,
+    oriented_right=True, is_x=True, name="car_R_upper_road_cost",
+    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Round boundary costs.
 
 car_R_min_vel_cost = SemiquadraticCost(

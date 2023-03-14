@@ -2,10 +2,10 @@ clear; close all; clc
 
 % Loads data.
 game_param = '11';
-xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_demo.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_demo.npy')));
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
 
-% xs = double(readNPY(strcat('two_car/two_car_RHC_xs.npy')))';
+xs = double(readNPY(strcat('two_car/two_car_RHC_xs.npy')))';
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
@@ -15,8 +15,8 @@ option.keep_traj  = true;
 option.is_fading  = false;
 option.t_skip     = 10;
 option.N_interp   = 1;
-option.t_start    = [];
-option.t_end      = 45;
+option.t_start    = 1;
+option.t_end      = 90;
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;
@@ -255,7 +255,7 @@ end
 return
 
 %% Plot demo opinions
-zs = double(readNPY(strcat('two_car/two_car_12_opn_demo.npy')));
+zs = double(readNPY(strcat('two_car/two_car_22_opn_demo.npy')));
 
 t_end = 74;
 
@@ -303,10 +303,10 @@ ylabel('$\lambda^2$', 'Interpreter','latex')
 
 
 %% Plot Hs color map
-Hs = double(readNPY(strcat('two_car/two_car_11_Hs_demo.npy')));
+Hs = double(readNPY(strcat('two_car/two_car_22_Hs_demo.npy')));
 
 figure('Color','white')
-time = 49
+time = 45
 imagesc(Hs(:,:,time))
 xticks([1,2,3,4])
 yticks([1,2,3,4])

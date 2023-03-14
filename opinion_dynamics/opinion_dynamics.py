@@ -281,9 +281,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       return lax.cond(k == 0, true_fn, false_fn, x_jnt_dot)
 
     else:
-      H = jnp.vstack((H1, H2))
-      return x_jnt_dot, H, PoI_1, PoI_2
-      # return x_jnt_dot
+      # H = jnp.vstack((H1, H2))
+      # return x_jnt_dot, H, PoI_1, PoI_2
+      return x_jnt_dot
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn_fixed_att(
