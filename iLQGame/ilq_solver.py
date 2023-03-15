@@ -25,7 +25,7 @@ class ILQSolver(object):
 
   def __init__(
       self, dynamics, player_costs, Ps, alphas, alpha_scaling=0.05,
-      max_iter=100, u_constraints=None, verbose=False
+      max_iter=100, u_constraints=None, verbose=False, name=None
   ):
     """
     Initializer.
@@ -40,6 +40,7 @@ class ILQSolver(object):
     self._num_players = dynamics._num_players
     self._alpha_scaling = alpha_scaling
     self._verbose = verbose
+    self._name = name
 
     self.reset()
 
@@ -90,7 +91,7 @@ class ILQSolver(object):
       current_Ps = self._Ps
 
       # Line search based on social cost.
-      total_cost_best_ls = 1e10
+      total_cost_best_ls = np.Inf
       best_alphas = self._alphas
       for alpha_scaling in self._alpha_scaling:
         current_alphas = self._alphas
@@ -346,18 +347,13 @@ class ILQSolver(object):
         [np.ndarray]: zetas
     """
 
-    # Unpack horizon and number of players.
+    # Unpacks horizon and number of players.
     horizon = self._horizon
     num_players = self._num_players
 
-    # Cache dimensions of state and controls for each player.
+    # Caches dimensions of state and controls for each player.
     x_dim = self._dynamics._x_dim
     u_dims = self._dynamics._u_dims
-
-    # Note: notation and variable naming closely follows that introduced in
-    # the "Preliminary Notation for Corollary 6.1" section, which may be found
-    # on pp. 279 of Basar and Olsder.
-    # NOTE: we will assume that `c` from Basar and Olsder is always `0`.
 
     # Recursively computes all intermediate and final variables.
     Zs = [np.zeros((x_dim, x_dim, horizon + 1)) for _ in range(num_players)]
@@ -382,9 +378,6 @@ class ILQSolver(object):
       zeta = [zetais[:, k + 1] for zetais in zetas]
 
       # Computes Ps given previously computed Zs.
-      # Refer to equation 6.17a in Basar and Olsder.
-      # This will involve solving a system of matrix linear equations of the
-      # form [S1s; S2s; ...] * [P1; P2; ...] = [Y1; Y2; ...].
       S_rows = [[] for _ in range(num_players)]
       for ii in range(num_players):
         Sis = [[] for _ in range(num_players)]
@@ -409,7 +402,6 @@ class ILQSolver(object):
         Ps[ii][:, :, k] = P_split[ii]
 
       # Computes F_k = A_k - B1_k P1_k - B2_k P2_k -...
-      # This is eq. 6.17c from Basar and Olsder.
       F = A - sum([B[ii] @ P_split[ii] for ii in range(num_players)])
 
       # Updates Zs.
@@ -418,10 +410,6 @@ class ILQSolver(object):
               ] = F.T @ Z[ii] @ F + Q[ii] + P_split[ii].T @ R[ii] @ P_split[ii]
 
       # Computes alphas using previously computed zetas.
-      # Refer to equation 6.17d in Basar and Olsder.
-      # This will involve solving a system of linear matrix equations of the
-      # form [S1s; S2s; ...] * [alpha1; alpha2; ..] = [Y1; Y2; ...].
-      # In fact, this is the same S matrix as before (just a different Y).
       Y = np.concatenate([B[ii].T @ zeta[ii] for ii in range(num_players)])
 
       alpha, _, _, _ = np.linalg.lstsq(a=S, b=Y, rcond=None)
@@ -431,11 +419,9 @@ class ILQSolver(object):
         alphas[ii][:, k] = alpha_split[ii]
 
       # Computes beta_k = -B1_k alpha1 - B2_k alpha2_k -...
-      # This is eq. 6.17f in Basar and Olsder (with `c = 0`).
       beta = -sum([B[ii] @ alpha_split[ii] for ii in range(num_players)])
 
-      # Updates zetas to be the next step earlier in time (now they
-      # correspond to time k+1). This is Remark 6.3 in Basar and Olsder.
+      # Updates zetas to be the next step earlier in time.
       for ii in range(num_players):
         zetas[ii][:, k] = F.T @ (zeta[ii] + Z[ii] @ beta) + l[
             ii] + P_split[ii].T @ R[ii] @ alpha_split[ii]

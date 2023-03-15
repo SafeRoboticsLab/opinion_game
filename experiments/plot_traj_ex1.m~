@@ -1,7 +1,7 @@
 clear; close all; clc
 
 % Loads data.
-game_param = '22';
+game_param = '11';
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_demo.npy')));
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
 xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
@@ -256,11 +256,10 @@ end
 return
 
 %% Plot demo opinions
-close all
 % zs = double(readNPY(strcat('two_car/two_car_22_opn_demo.npy')));
-zs = double(readNPY(strcat('two_car/two_car_12_zs_replan.npy')));
+zs = double(readNPY(strcat('two_car/two_car_11_zs.npy')));
 
-t_end = 100;
+t_end = 74;
 
 % P1's opinion
 sigma_z1 = softmax(zs(1:2, 1:t_end));

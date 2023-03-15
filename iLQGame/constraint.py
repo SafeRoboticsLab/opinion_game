@@ -14,8 +14,7 @@ import jax.numpy as jnp
 
 class Constraint(object):
   """
-  Base class for all constraints. Supports clipping an np.array to satisfy the
-  constraint.
+  Base class for all constraints.
   """
 
   def __init__(self):
