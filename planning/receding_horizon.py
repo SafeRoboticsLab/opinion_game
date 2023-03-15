@@ -5,93 +5,123 @@ Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 """
 
-import time
 import numpy as np
+
+from .qmdp import QMDP
 
 
 class RHCPlanner(object):
 
-  def __init__(self, ILQSolver, N_sim, GiNOD, subgame):
+  def __init__(
+      self, subgames, N_sim, ph_sys, ph_sys_casadi, GiNOD, method='QMDPL0',
+      config=None, W_ctrl=None
+  ):
     """
     Initializer.
     """
-    self._ILQSolver = ILQSolver
+    self._subgames = subgames
     self._N_sim = N_sim
+    self._ph_sys = ph_sys
     self._GiNOD = GiNOD
+    self._method = method
+    self._QMDP_P1 = QMDP(
+        ph_sys_casadi, GiNOD, W_ctrl[0], player_id=1, config=config
+    )
+    self._QMDP_P2 = QMDP(
+        ph_sys_casadi, GiNOD, W_ctrl[1], player_id=2, config=config
+    )
+    self._look_ahead = config.LOOK_AHEAD
 
-    (Z1, Z2, zeta1, zeta2, xnom) = subgame
-    self._Z1 = np.asarray(Z1)
-    self._Z2 = np.asarray(Z2)
-    self._zeta1 = np.asarray(zeta1)
-    self._zeta2 = np.asarray(zeta2)
-    self._xnom = np.asarray(xnom)
-
-  def plan(self, x0):
+  def plan(self, x0, z0):
     """
     RHC planning.
+    Assumes two player.
     """
 
     # Initialization.
-    xs = x0
-    x = x0
+    nx = len(x0)
+    nz = len(z0)
+    nz1 = self._GiNOD._num_opn_P1
+    nz2 = self._GiNOD._num_opn_P2
+
+    xs = np.zeros((nx, self._N_sim + 1))
+    zs = np.zeros((nz, self._N_sim + 1))
+    xs[:, 0] = x0
+    zs[:, 0] = z0
+
+    Hs = np.zeros((nz1 + nz2, nz1 + nz2, self._N_sim))
+    PoI = np.zeros((2, self._N_sim))
 
     for k in range(self._N_sim):
-      x_ph = np.hstack(
-          (x[self._GiNOD._x_indices_P1], x[self._GiNOD._x_indices_P2])
-      )[:, np.newaxis]
 
-      Z1_k = np.zeros_like(self._Z1[:, :, :, :, 0])
-      Z2_k = np.zeros_like(self._Z2[:, :, :, :, 0])
-      zeta1_k = np.zeros_like(self._zeta1[:, :, :, 0])
-      zeta2_k = np.zeros_like(self._zeta2[:, :, :, 0])
-      xnom_k = np.zeros_like(self._xnom[:, :, :, 0])
-      # Searches for the nearest state in each subgame trajecotries.
-      for l1 in [1, 2]:
-        for l2 in [1, 2]:
-          xerr = np.linalg.norm(
-              x_ph - self._xnom[:, l1 - 1, l2 - 1, :], axis=0
-          )
-          idx_k = np.argmin(xerr)
-          Z1_k[:, :, l1 - 1, l2 - 1] = self._Z1[:, :, l1 - 1, l2 - 1, idx_k]
-          Z2_k[:, :, l1 - 1, l2 - 1] = self._Z2[:, :, l1 - 1, l2 - 1, idx_k]
-          zeta1_k[:, l1 - 1, l2 - 1] = self._zeta1[:, l1 - 1, l2 - 1, idx_k]
-          zeta2_k[:, l1 - 1, l2 - 1] = self._zeta2[:, l1 - 1, l2 - 1, idx_k]
-          xnom_k[:, l1 - 1, l2 - 1] = self._xnom[:, l1 - 1, l2 - 1, idx_k]
+      # Initialize subgame information.
+      Z1_k = np.zeros((nx, nx, nz1, nz2))
+      Z2_k = np.zeros((nx, nx, nz1, nz2))
+      zeta1_k = np.zeros((nx, nz1, nz2))
+      zeta2_k = np.zeros((nx, nz1, nz2))
+      xnom_k = np.zeros((nx, nz1, nz2))
 
-      # Assigns warmstart strategies.
-      Ps_warmstart = None  #self._ILQSolver._Ps
-      alphas_warmstart = None  #self._ILQSolver._alphas
+      # Solve subgames and collects subgame information.
+      for l1 in range(nz1):
+        for l2 in range(nz2):
+          solver = self._subgames[l1][l2]
+          solver.run(xs[:, k])  # solves the subgame.
+          xs_ILQ = np.asarray(solver._best_operating_point[0])
+          xnom_k[:, l1, l2] = xs_ILQ[:, self._look_ahead]
+          Zs = np.asarray(solver._best_operating_point[4])[:, :, :, 0]
+          zetas = np.asarray(solver._best_operating_point[5])[:, :, 0]
+          Z1_k[:, :, l1, l2] = Zs[0, :, :]
+          Z2_k[:, :, l1, l2] = Zs[1, :, :]
+          zeta1_k[:, l1, l2] = zetas[0, :]
+          zeta2_k[:, l1, l2] = zetas[1, :]
 
-      # Solves iLQ-OG.
-      z1_k = x[self._GiNOD._z_indices_P1]
-      z2_k = x[self._GiNOD._z_indices_P2]
-      att1_k = x[self._GiNOD._att_indices_P1]
-      att2_k = x[self._GiNOD._att_indices_P2]
+          if k == 0:
+            print('[RHC] Subgame', l1, l2, 'compiled.')
 
+      if k == 0:
+        z1_k = z0[:nz1]
+        z2_k = z0[nz1:nz1 + nz2]
+      else:
+        z1_k = zs[:nz1, k - 1]
+        z2_k = zs[nz1:nz1 + nz2, k - 1]
+
+      # Solves QMDP based on current subgames and opinion states.
+      if self._method == 'QMDPL0':
+        # Player 1
+        u1 = self._QMDP_P1.plan_level_0(xs[:, k], z1_k, z2_k, self._subgames)
+
+        # Player 2
+        u2 = self._QMDP_P2.plan_level_0(xs[:, k], z2_k, z1_k, self._subgames)
+
+      elif self._method == 'QMDPL1':
+        raise NotImplementedError
+      elif self._method == 'QMDPL1L0':
+        raise NotImplementedError
+      else:
+        raise NotImplementedError
+
+      u_list = [u1, u2]
+
+      # Evolves GiNOD.
+      x_jnt = np.hstack((xs[:, k], zs[:, k]))
       subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_k, z2_k)
 
-      t_start = time.time()
-      self._ILQSolver.run_OG_two_player(
-          x, subgame_k, Ps_warmstart, alphas_warmstart
+      z_dot_k, H_k, PoI1_k, PoI2_k = self._GiNOD.cont_time_dyn(
+          x_jnt, None, subgame_k
       )
-      print("[RHC] iLQ-OG solving time: ", time.time() - t_start, "\n")
 
-      x_ILQ = self._ILQSolver._best_operating_point[0][:, 1]
-      # print(self._ILQSolver._best_operating_point[0][:, 8:12])
+      zs[:, k + 1] = zs[:, k] + self._GiNOD._T * np.asarray(z_dot_k)
+      Hs[:, :, k] = np.asarray(H_k)
+      PoI[:, k] = np.array((PoI1_k, PoI2_k))
 
-      # **** THERE IS A BUG ****
+      # Evolves physical states.
+      x_ph_next = self._ph_sys.disc_time_dyn(xs[:, k], u_list)
+      xs[:, k + 1] = np.asarray(x_ph_next)
 
-      # Stores results.
-      z = np.hstack((z1_k, z2_k, att1_k, att2_k))
-      z_dot_k = self._GiNOD.cont_time_dyn(x, None, 0, subgame_k)
-      z = z + self._GiNOD._T * z_dot_k
-      x_ph = np.hstack(
-          (x_ILQ[self._GiNOD._x_indices_P1], x_ILQ[self._GiNOD._x_indices_P2])
-      )
-      x = np.hstack((x_ph, z))
-
-      xs = np.vstack((xs, x))
-
-      print(z)
+      # print(x_jnt)
+      print(np.round(zs[:, k], 2), PoI1_k, PoI2_k)
 
     self.xs = xs
+    self.zs = zs
+    self.Hs = Hs
+    self.PoI = PoI

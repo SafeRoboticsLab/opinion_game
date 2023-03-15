@@ -1,11 +1,11 @@
 clear; close all; clc
 
 % Loads data.
-game_param = '22';
+% game_param = '22';
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
-xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 
-% xs = double(readNPY(strcat('two_car/two_car_RHC_xs.npy')))';
+xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
@@ -13,7 +13,7 @@ XH_in = xs(5:8, :);
 % Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 10;
+option.t_skip     = 6;
 option.N_interp   = 1;
 option.t_start    = 1;
 option.t_end      = [];
@@ -73,53 +73,6 @@ end
 % Font size
 fs = 25;
 
-%% Plot opinions and attentions
-if size(xs,1) > 8
-    
-    % P1's opinion
-    sigma_z1 = softmax(xs(9:10, 1:option.t_end));
-    figure('Color','white')
-    set(gca,'FontSize',fs)
-    hold on
-    plot(sigma_z1(1,:), 'LineWidth', 2)
-    plot(sigma_z1(2,:), 'LineWidth', 2)
-    xlabel('Time step', 'Interpreter','latex')
-    ylabel('$\sigma(z^1)$', 'Interpreter','latex')
-    legend('$\sigma_1(z^1)$','$\sigma_2(z^1)$', 'Interpreter','latex')
-    ylim([-0.2, 1.2])
-    
-    % P2's opinion
-    sigma_z2 = softmax(xs(11:12, 1:option.t_end));
-    figure('Color','white')
-    set(gca,'FontSize',fs)
-    hold on
-    plot(sigma_z2(1,:), 'LineWidth', 2)
-    plot(sigma_z2(2,:), 'LineWidth', 2)
-    xlabel('Time step', 'Interpreter','latex')
-    ylabel('$\sigma(z^2)$', 'Interpreter','latex')
-    legend('$\sigma_1(z^2)$','$\sigma_2(z^2)$', 'Interpreter','latex')
-    ylim([-0.2, 1.2])
-    
-    % P1's attention
-    att1 = xs(13, 1:option.t_end);
-    figure('Color','white')
-    set(gca,'FontSize',fs)
-    hold on
-    plot(att1, 'LineWidth', 2)
-    xlabel('Time step', 'Interpreter','latex')
-    ylabel('$\lambda^1$', 'Interpreter','latex')
-    
-    % P2's attention
-    att2 = xs(14, 1:option.t_end);
-    figure('Color','white')
-    set(gca,'FontSize',fs)
-    hold on
-    plot(att2, 'LineWidth', 2)
-    xlabel('Time step', 'Interpreter','latex')
-    ylabel('$\lambda^2$', 'Interpreter','latex')
-    
-end
-
 
 %% Plot vehicles
 f = figure('Color','white');
@@ -130,7 +83,7 @@ if ~option.UI
 end
 hold on
 daspect([1,1,1])
-xlimSpan = [-5, 100];
+xlimSpan = [-20, 100];
 ylimSpan = [-6, 13];
 xlim(xlimSpan)
 ylim(ylimSpan)
@@ -256,9 +209,11 @@ return
 
 %% Plot demo opinions
 close all
-zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
 
-t_end = 100;
+zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
+
+t_end = 120;
 
 % P1's opinion
 sigma_z1 = softmax(zs(1:2, 1:t_end));

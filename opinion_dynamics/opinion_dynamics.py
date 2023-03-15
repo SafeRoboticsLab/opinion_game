@@ -5,7 +5,9 @@ Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 """
 
+import numpy as np
 from typing import Tuple
+from casadi import vertcat
 
 import jax
 from functools import partial
@@ -49,8 +51,6 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         rho (float, optional): att scaling parameter. Defaults to 1.0.
         T (float, optional): time interval. Defaults to 0.1.
     """
-    assert damping_opn >= 0
-    assert damping_att >= 0
     assert rho >= 0
 
     self._x_indices_P1 = x_indices_P1
@@ -67,6 +67,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     self._eps = 0.
     self._PoI_max = 10.0
+    self._z_norm_thresh = 10.0
 
     # Players' number of options
     self._num_opn_P1 = len(self._z_indices_P1)
@@ -218,6 +219,12 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
       PoI = jnp.max(ratios)
       return jnp.minimum(PoI, self._PoI_max)
 
+    def true_fn(PoI):
+      return PoI
+
+    def false_fn(PoI):
+      return 1.0
+
     Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2 = subgame
 
     # State variables.
@@ -261,11 +268,127 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     PoI_1 = jnp.nan_to_num(compute_PoI_P1(z1, x_ph), nan=1.0)
     PoI_2 = jnp.nan_to_num(compute_PoI_P2(z2, x_ph), nan=1.0)
 
-    att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1)
-    att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1)
+    z1_norm = jnp.linalg.norm(z1)
+    PoI_1 = lax.cond(z1_norm <= self._z_norm_thresh, true_fn, false_fn, PoI_1)
+
+    z2_norm = jnp.linalg.norm(z2)
+    PoI_2 = lax.cond(z2_norm <= self._z_norm_thresh, true_fn, false_fn, PoI_2)
+
+    att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1.0)
+    att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1.0)
 
     # Joint state time derivative.
     x_jnt_dot = jnp.hstack((z_dot, att1_dot, att2_dot))
 
     return x_jnt_dot, jnp.vstack((H1, H2)), PoI_1, PoI_2
     # return x_jnt_dot
+
+  @partial(jit, static_argnums=(0,))
+  def cont_time_dyn_fixed_att(
+      self,
+      x: DeviceArray,
+      ctrl=None,
+      subgame: Tuple = (),
+  ) -> DeviceArray:
+    """
+    Computes the time derivative of state for a particular state/control.
+    This is an autonomous system.
+
+    Args:
+        x (DeviceArray): (nx,) where nx is the dimension of the joint
+          system (physical subsystems plus all players' opinion dynamics)
+          For each opinion dynamics, their state := (z, u) where z is the
+          opinion state and u is the attention parameter
+        ctrl (DeviceArray): None
+
+        subgame (Tuple) include:
+        Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
+          (subgame cost matrices)
+        Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
+          (subgame cost matrices)
+        zeta_P1 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P1's zeta
+          (subgame cost vectors)
+        zeta_P2 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P2's zeta
+          (subgame cost vectors)
+        x_ph_nom (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) subgame
+          nominal physical states
+        znom_P1 (DeviceArray): (nz_P1,) P1 nominal z
+        znom_P2 (DeviceArray): (nz_P2,) P2 nominal z
+
+    Returns:
+        DeviceArray: next state (nx,)
+        DeviceArray: H (nz, nz)
+    """
+
+    def Vhat1(
+        z1: DeviceArray, z2: DeviceArray, x_ph: DeviceArray
+    ) -> DeviceArray:
+      """
+      Opinion-weighted game value function for P1.
+      """
+      V_hat = 0.
+      for l1 in range(self._num_opn_P1):
+        for l2 in range(self._num_opn_P2):
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P1[:, :, l1, l2]
+          zeta_sub = zeta_P1[:, l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
+      return V_hat
+
+    def Vhat2(
+        z1: DeviceArray, z2: DeviceArray, x_ph: DeviceArray
+    ) -> DeviceArray:
+      """
+      Opinion-weighted game value function for P2.
+      """
+      V_hat = 0.
+      for l1 in range(self._num_opn_P1):
+        for l2 in range(self._num_opn_P2):
+          xe = x_ph - x_ph_nom[:, l1, l2]  # error state
+          Z_sub = Z_P2[:, :, l1, l2]
+          zeta_sub = zeta_P2[:, l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
+      return V_hat
+
+    Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2 = subgame
+
+    # State variables.
+    x_ph1 = x[self._x_indices_P1]
+    x_ph2 = x[self._x_indices_P2]
+    x_ph = jnp.hstack((x_ph1, x_ph2))
+
+    z1 = x[self._z_indices_P1]
+    z2 = x[self._z_indices_P2]
+    z = jnp.hstack((z1, z2))
+
+    att1 = x[self._att_indices_P1]
+    att2 = x[self._att_indices_P2]
+
+    # Computes game Hessians.
+    dVhat1_dz1 = jacfwd(Vhat1, argnums=0)
+    H1s = jacfwd(dVhat1_dz1, argnums=[0, 1])
+    H1 = jnp.hstack(H1s(znom_P1, znom_P2, x_ph))
+
+    dVhat2_dz2 = jacfwd(Vhat2, argnums=1)
+    H2s = jacfwd(dVhat2_dz2, argnums=[0, 1])
+    H2 = jnp.hstack(H2s(znom_P1, znom_P2, x_ph))
+
+    H1 = jax.nn.standardize(H1)  # Avoid large numbers.
+    H2 = jax.nn.standardize(H2)  # Avoid large numbers.
+
+    # Computes the opinion state time derivative.
+    att_1_vec = att1 * jnp.ones((self._num_opn_P1,))
+    att_2_vec = att2 * jnp.ones((self._num_opn_P2,))
+
+    D = jnp.diag(
+        self._damping_opn * jnp.ones(self._num_opn_P1 + self._num_opn_P2,)
+    )
+
+    H1z = att_1_vec * jnp.tanh(H1@z + self._z_P1_bias)
+    H2z = att_2_vec * jnp.tanh(H2@z + self._z_P2_bias)
+
+    z_dot = -D @ z + jnp.hstack((H1z, H2z))
+
+    return z_dot

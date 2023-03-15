@@ -382,7 +382,7 @@ class ILQSolver(object):
       for ii in range(num_players):
         Sis = [[] for _ in range(num_players)]
         for jj in range(num_players):
-          # Sis[jj] = B[ii].T @ np.nan_to_num(Z[ii]) @ B[jj]
+          Z[ii] = np.nan_to_num(Z[ii], nan=0.0)
           Sis[jj] = B[ii].T @ Z[ii] @ B[jj]
         Sis[ii] += R[ii]
         S_rows[ii] = np.concatenate(Sis, axis=1)
