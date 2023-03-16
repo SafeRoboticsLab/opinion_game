@@ -13,10 +13,10 @@ XH_in = xs(5:8, :);
 % Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 6;
+option.t_skip     = 10;
 option.N_interp   = 1;
 option.t_start    = 1;
-option.t_end      = [];
+option.t_end      = 110;
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;
@@ -213,7 +213,7 @@ close all
 
 z_normalizer = 1.0;
 
-zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy'))) / z_normalizer;
+zs = double(readNPY(strcat('two_car/two_car_L1L0_zs.npy'))) / z_normalizer;
 
 t_end = 70;
 
@@ -261,12 +261,13 @@ ylabel('$\lambda^2$', 'Interpreter','latex')
 
 
 %% Plot Hs color map
-Hs = double(readNPY(strcat('two_car/two_car_22_Hs_replan.npy')));
+Hs = double(readNPY(strcat('two_car/two_car_L1_Hs.npy')));
 
-figure('Color','white')
-time = 45
-imagesc(Hs(:,:,time))
-xticks([1,2,3,4])
-yticks([1,2,3,4])
-set(gca,'FontSize',fs)
-title(strcat('step=',num2str(time)), 'Interpreter','latex')
+for time = 17
+    figure('Color','white')
+    imagesc(Hs(:,:,time))
+    xticks([1,2,3,4])
+    yticks([1,2,3,4])
+    set(gca,'FontSize',fs)
+    title(strcat('step=',num2str(time)), 'Interpreter','latex')
+end

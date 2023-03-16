@@ -29,7 +29,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
   def __init__(
       self, x_indices_P1, x_indices_P2, z_indices_P1, z_indices_P2,
       att_indices_P1, att_indices_P2, z_P1_bias, z_P2_bias, damping_opn=0.0,
-      damping_att=0.0, rho=1.0, T=0.1
+      damping_att=0.0, rho=1.0, T=0.1, z_norm_thresh=10.0
   ):
     """
     Initializer.
@@ -67,7 +67,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     self._eps = 0.
     self._PoI_max = 10.0
-    self._z_norm_thresh = 10.0
+    self._z_norm_thresh = z_norm_thresh
 
     # Players' number of options
     self._num_opn_P1 = len(self._z_indices_P1)

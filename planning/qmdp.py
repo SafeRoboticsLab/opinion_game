@@ -196,11 +196,19 @@ class QMDP(object):
     A_MAX = config.A_MAX
     W_MIN = config.W_MIN
     W_MAX = config.W_MAX
-    _res_a = 0.1
-    _res_w = 0.05
+    _res_a = 0.015
+    _res_w = 0.002
+
+    # N_grid = 10000
+    # key = jax.random.PRNGKey(758493)
+    # us_ego = jax.random.uniform(
+    #     key, shape=((nu, 10000)), minval=jnp.array([[A_MIN, W_MIN]]).T,
+    #     maxval=jnp.array([[A_MAX, W_MAX]]).T
+    # )
+
     us_ego = jnp.mgrid[A_MIN:A_MAX:_res_a, W_MIN:W_MAX:_res_w]
     N_grid = us_ego.shape[1] * us_ego.shape[2]
-    us_ego = reshape(nu, N_grid)
+    us_ego = us_ego.reshape(nu, N_grid)
 
     # Gets the players' most likely opinions.
     opn_ego = np.argmax(softmax(z_ego))
@@ -215,10 +223,10 @@ class QMDP(object):
       U_ego = subgames[opn_ego][opn_opp]._best_operating_point[1][1]
     U_ego = np.asarray(U_ego)
     U_opp = np.asarray(U_opp)
-    u_ego_nom = U_ego[:, :1]
+    u_ego_nom = U_ego[:, 0]
     u_opp = U_opp[:, :1]
 
-    us_opp = np.tile(u_opp, (N_grid, 1)).T
+    us_opp = np.tile(u_opp, N_grid)
     if self._player_id == 1:
       us = np.vstack((us_ego, us_opp))
     elif self._player_id == 2:
@@ -271,5 +279,8 @@ class QMDP(object):
 
     # Gets the optimal action.
     u_ego = us_ego[:, idx_min]
+    u_ego = np.asarray(u_ego)
 
-    return np.asarray(u_ego)
+    # print(u_ego, u_ego_nom)
+
+    return u_ego

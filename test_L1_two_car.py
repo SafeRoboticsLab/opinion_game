@@ -325,8 +325,10 @@ subgames = [[solver11, solver12], [solver21, solver22]]
 # Initializes states.
 # car_R_px0 = -12.0
 car_R_px0 = -8.0
+
 # car_R_py0 = 1.0
 car_R_py0 = 0.5
+
 car_R_theta0 = 0.0
 car_R_v0 = 4.0
 car_R_x0 = np.array([car_R_px0, car_R_py0, car_R_theta0, car_R_v0])
@@ -363,12 +365,12 @@ W_R = np.diag([5.0, 5.0])
 W_H = np.diag([5.0, 5.0])
 
 planner = RHCPlanner(
-    subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL0',
+    subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL1',
     config=config, W_ctrl=[W_R, W_H]
 )
 planner.plan(jnt_x0, z0)
 
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_xs.npy'), planner.xs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_zs.npy'), planner.zs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_Hs.npy'), planner.Hs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_PoI.npy'), planner.PoI)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_xs.npy'), planner.xs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_zs.npy'), planner.zs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_Hs.npy'), planner.Hs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_PoI.npy'), planner.PoI)

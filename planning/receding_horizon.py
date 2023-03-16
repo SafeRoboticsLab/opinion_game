@@ -79,16 +79,18 @@ class RHCPlanner(object):
             print('[RHC] Subgame', l1, l2, 'compiled.')
 
       if k == 0:
-        z1_k = z0[:nz1]
-        z2_k = z0[nz1:nz1 + nz2]
+        z1_nom = z0[:nz1]
+        z2_nom = z0[nz1:nz1 + nz2]
       else:
-        z1_k = zs[:nz1, k - 1]
-        z2_k = zs[nz1:nz1 + nz2, k - 1]
+        z1_nom = zs[:nz1, k - 1]
+        z2_nom = zs[nz1:nz1 + nz2, k - 1]
 
-      att1_k = z0[nz1 + nz2:nz1 + nz2 + 1, k]
-      att2_k = z0[-1, k]
+      z1_k = zs[:nz1, k]
+      z2_k = zs[nz1:nz1 + nz2, k]
+      att1_k = zs[nz1 + nz2:nz1 + nz2 + 1, k]
+      att2_k = zs[-1, k]
 
-      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_k, z2_k)
+      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_nom, z2_nom)
 
       # Solves QMDP based on current subgames and opinion states.
       if self._method == 'QMDPL0':
@@ -110,7 +112,14 @@ class RHCPlanner(object):
         )
 
       elif self._method == 'QMDPL1L0':
-        raise NotImplementedError
+        # Player 1
+        u1 = self._QMDP_P1.plan_level_1(
+            xs[:, k], z1_k, z2_k, att1_k, att2_k, self._subgames, subgame_k
+        )
+
+        # Player 2
+        u2 = self._QMDP_P2.plan_level_0(xs[:, k], z2_k, z1_k, self._subgames)
+
       else:
         raise NotImplementedError
 
