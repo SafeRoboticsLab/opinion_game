@@ -211,9 +211,11 @@ return
 close all
 % zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
 
-zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
+z_normalizer = 1.0;
 
-t_end = 120;
+zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy'))) / z_normalizer;
+
+t_end = 70;
 
 % P1's opinion
 sigma_z1 = softmax(zs(1:2, 1:t_end));

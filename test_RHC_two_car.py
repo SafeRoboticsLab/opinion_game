@@ -323,20 +323,23 @@ subgames = [[solver11, solver12], [solver21, solver22]]
 # RHC Planning
 ################################################################################
 # Initializes states.
-car_R_px0 = -15.0
-car_R_py0 = 1.0  #3.5
+# car_R_px0 = -12.0
+car_R_px0 = -8.0
+# car_R_py0 = 1.0
+car_R_py0 = 0.5
 car_R_theta0 = 0.0
 car_R_v0 = 4.0
 car_R_x0 = np.array([car_R_px0, car_R_py0, car_R_theta0, car_R_v0])
 
 car_H_px0 = 0.0
-car_H_py0 = 5.5  #3.5
+car_H_py0 = 5.5
 car_H_theta0 = 0.0
 car_H_v0 = 4.0
 car_H_x0 = np.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])
 
 jnt_x0 = np.concatenate([car_R_x0, car_H_x0], axis=0)
-z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 0., 0.]))
+# z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 0., 0.]))
+z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 1., 1.]))
 
 # Creates the GiNOD.
 GiNOD = NonlinearOpinionDynamicsTwoPlayer(

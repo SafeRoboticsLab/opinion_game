@@ -284,40 +284,19 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     # return x_jnt_dot
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn_fixed_att(
+  def disc_dyn_jitted(
       self,
-      x: DeviceArray,
+      x_ph: DeviceArray,
+      z1: DeviceArray,
+      z2: DeviceArray,
+      att1: DeviceArray,
+      att2: DeviceArray,
       ctrl=None,
       subgame: Tuple = (),
   ) -> DeviceArray:
     """
-    Computes the time derivative of state for a particular state/control.
+    Computes the next opinion state.
     This is an autonomous system.
-
-    Args:
-        x (DeviceArray): (nx,) where nx is the dimension of the joint
-          system (physical subsystems plus all players' opinion dynamics)
-          For each opinion dynamics, their state := (z, u) where z is the
-          opinion state and u is the attention parameter
-        ctrl (DeviceArray): None
-
-        subgame (Tuple) include:
-        Z_P1 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P1's Z
-          (subgame cost matrices)
-        Z_P2 (DeviceArray): (nx_ph, nx_ph, num_opn_P1, num_opn_P2) P2's Z
-          (subgame cost matrices)
-        zeta_P1 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P1's zeta
-          (subgame cost vectors)
-        zeta_P2 (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) P2's zeta
-          (subgame cost vectors)
-        x_ph_nom (DeviceArray): (nx_ph, num_opn_P1, num_opn_P2) subgame
-          nominal physical states
-        znom_P1 (DeviceArray): (nz_P1,) P1 nominal z
-        znom_P2 (DeviceArray): (nz_P2,) P2 nominal z
-
-    Returns:
-        DeviceArray: next state (nx,)
-        DeviceArray: H (nz, nz)
     """
 
     def Vhat1(
@@ -355,16 +334,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2 = subgame
 
     # State variables.
-    x_ph1 = x[self._x_indices_P1]
-    x_ph2 = x[self._x_indices_P2]
-    x_ph = jnp.hstack((x_ph1, x_ph2))
-
-    z1 = x[self._z_indices_P1]
-    z2 = x[self._z_indices_P2]
     z = jnp.hstack((z1, z2))
-
-    att1 = x[self._att_indices_P1]
-    att2 = x[self._att_indices_P2]
 
     # Computes game Hessians.
     dVhat1_dz1 = jacfwd(Vhat1, argnums=0)
@@ -391,4 +361,4 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     z_dot = -D @ z + jnp.hstack((H1z, H2z))
 
-    return z_dot
+    return z + self._T * z_dot

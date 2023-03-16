@@ -85,6 +85,11 @@ class RHCPlanner(object):
         z1_k = zs[:nz1, k - 1]
         z2_k = zs[nz1:nz1 + nz2, k - 1]
 
+      att1_k = z0[nz1 + nz2:nz1 + nz2 + 1, k]
+      att2_k = z0[-1, k]
+
+      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_k, z2_k)
+
       # Solves QMDP based on current subgames and opinion states.
       if self._method == 'QMDPL0':
         # Player 1
@@ -94,7 +99,16 @@ class RHCPlanner(object):
         u2 = self._QMDP_P2.plan_level_0(xs[:, k], z2_k, z1_k, self._subgames)
 
       elif self._method == 'QMDPL1':
-        raise NotImplementedError
+        # Player 1
+        u1 = self._QMDP_P1.plan_level_1(
+            xs[:, k], z1_k, z2_k, att1_k, att2_k, self._subgames, subgame_k
+        )
+
+        # Player 2
+        u2 = self._QMDP_P2.plan_level_1(
+            xs[:, k], z2_k, z1_k, att2_k, att1_k, self._subgames, subgame_k
+        )
+
       elif self._method == 'QMDPL1L0':
         raise NotImplementedError
       else:
@@ -104,7 +118,6 @@ class RHCPlanner(object):
 
       # Evolves GiNOD.
       x_jnt = np.hstack((xs[:, k], zs[:, k]))
-      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_k, z2_k)
 
       z_dot_k, H_k, PoI1_k, PoI2_k = self._GiNOD.cont_time_dyn(
           x_jnt, None, subgame_k
