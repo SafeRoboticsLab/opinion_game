@@ -29,11 +29,11 @@ LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
 
 # Options.
-car_R_opn = 1
+car_R_opn = 2
 car_H_opn = 2
 
 # Simulation horizon.
-N_sim = 100
+N_sim = 150
 
 ################################################################################
 # Sets up subgames
@@ -250,46 +250,50 @@ car_R_alphas = jnp.zeros((car_R._u_dim, HORIZON_STEPS))
 car_H_alphas = jnp.zeros((car_H._u_dim, HORIZON_STEPS))
 
 # Sets up intent-dependent cost (Tracks the target lane (y-position)).
-car_R_goal_py_cost_1 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_1, dimension=car_R_py_index, is_x=True,
-    name="car_R_goal_py_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_R_tgt_booth_cost_1 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_1, dimension=car_R_py_index,
+    px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_R_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_R._u_dim
 )
-car_R_goal_py_cost_2 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_2, dimension=car_R_py_index, is_x=True,
-    name="car_R_goal_py_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_R_tgt_booth_cost_2 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_2, dimension=car_R_py_index,
+    px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_R_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_R._u_dim
 )
-car_H_goal_py_cost_1 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_1, dimension=car_H_py_index, is_x=True,
-    name="car_H_goal_py_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_H_tgt_booth_cost_1 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_1, dimension=car_H_py_index,
+    px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_H_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_H._u_dim
 )
-car_H_goal_py_cost_2 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_2, dimension=car_H_py_index, is_x=True,
-    name="car_H_goal_py_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_H_tgt_booth_cost_2 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_2, dimension=car_H_py_index,
+    px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_H_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_H._u_dim
 )
 
 car_R_cost_subgame11 = deepcopy(car_R_cost)
 car_H_cost_subgame11 = deepcopy(car_H_cost)
-car_R_cost_subgame11.add_cost(car_R_goal_py_cost_1, "x", config.GOAL_W_P1_1)
-car_H_cost_subgame11.add_cost(car_H_goal_py_cost_1, "x", config.GOAL_W_P2_1)
+car_R_cost_subgame11.add_cost(car_R_tgt_booth_cost_1, "x", config.GOAL_W_P1_1)
+car_H_cost_subgame11.add_cost(car_H_tgt_booth_cost_1, "x", config.GOAL_W_P2_1)
 
 car_R_cost_subgame12 = deepcopy(car_R_cost)
 car_H_cost_subgame12 = deepcopy(car_H_cost)
-car_R_cost_subgame12.add_cost(car_R_goal_py_cost_1, "x", config.GOAL_W_P1_1)
-car_H_cost_subgame12.add_cost(car_H_goal_py_cost_2, "x", config.GOAL_W_P2_2)
+car_R_cost_subgame12.add_cost(car_R_tgt_booth_cost_1, "x", config.GOAL_W_P1_1)
+car_H_cost_subgame12.add_cost(car_H_tgt_booth_cost_2, "x", config.GOAL_W_P2_2)
 
 car_R_cost_subgame21 = deepcopy(car_R_cost)
 car_H_cost_subgame21 = deepcopy(car_H_cost)
-car_R_cost_subgame21.add_cost(car_R_goal_py_cost_2, "x", config.GOAL_W_P1_2)
-car_H_cost_subgame21.add_cost(car_H_goal_py_cost_1, "x", config.GOAL_W_P2_1)
+car_R_cost_subgame21.add_cost(car_R_tgt_booth_cost_2, "x", config.GOAL_W_P1_2)
+car_H_cost_subgame21.add_cost(car_H_tgt_booth_cost_1, "x", config.GOAL_W_P2_1)
 
 car_R_cost_subgame22 = deepcopy(car_R_cost)
 car_H_cost_subgame22 = deepcopy(car_H_cost)
-car_R_cost_subgame22.add_cost(car_R_goal_py_cost_2, "x", config.GOAL_W_P1_2)
-car_H_cost_subgame22.add_cost(car_H_goal_py_cost_2, "x", config.GOAL_W_P2_2)
+car_R_cost_subgame22.add_cost(car_R_tgt_booth_cost_2, "x", config.GOAL_W_P1_2)
+car_H_cost_subgame22.add_cost(car_H_tgt_booth_cost_2, "x", config.GOAL_W_P2_2)
 
 # Sets up ILQSolvers for all subgames.
 alpha_scaling = np.linspace(0.01, 2.0, config.ALPHA_SCALING_NUM)
@@ -326,14 +330,14 @@ subgames = [[solver11, solver12], [solver21, solver22]]
 # Opinion evolution along subgame trajectories
 ################################################################################
 # Initializes states.
-car_R_px0 = 2.0
-car_R_py0 = 0.0
+car_R_px0 = 0.0
+car_R_py0 = 7.0
 car_R_theta0 = 0.0
 car_R_v0 = 5.0
 car_R_x0 = np.array([car_R_px0, car_R_py0, car_R_theta0, car_R_v0])
 
-car_H_px0 = 0.0
-car_H_py0 = 7.0
+car_H_px0 = 2.0
+car_H_py0 = 0.0
 car_H_theta0 = 0.0
 car_H_v0 = 5.0
 car_H_x0 = np.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])
@@ -362,9 +366,9 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P1_bias=z_bias,
     z_P2_bias=z_bias,
     T=TIME_RES,
-    damping_opn=0.0,
-    damping_att=1.0,
-    rho=0.9,
+    damping_opn=0.1,
+    damping_att=0.8,
+    rho=0.7,
 )
 
 for k in range(N_sim):
@@ -374,6 +378,8 @@ for k in range(N_sim):
   Z2_k = np.zeros((8, 8, 2, 2))
   zeta1_k = np.zeros((8, 2, 2))
   zeta2_k = np.zeros((8, 2, 2))
+  nom_cost1_k = np.zeros((2, 2))
+  nom_cost2_k = np.zeros((2, 2))
   xnom_k = np.zeros((8, 2, 2))
 
   # Sets nominal opinion states for GiNOD.
@@ -393,20 +399,26 @@ for k in range(N_sim):
       solver = subgames[l1][l2]
       solver.run(x[:, k])
 
-      LT = config.LOOK_AHEAD
-      xnom_k[:, l1, l2] = np.asarray(solver._best_operating_point[0])[:, LT]
+      tt = config.LOOK_AHEAD
+      xnom_k[:, l1, l2] = np.asarray(solver._best_operating_point[0])[:, tt]
 
       Zs = np.asarray(solver._best_operating_point[4])[:, :, :, 0]
       zetas = np.asarray(solver._best_operating_point[5])[:, :, 0]
+      nom_costs = np.asarray(solver._best_operating_point[6])
       Z1_k[:, :, l1, l2] = Zs[0, :, :]
       Z2_k[:, :, l1, l2] = Zs[1, :, :]
       zeta1_k[:, l1, l2] = zetas[0, :]
       zeta2_k[:, l1, l2] = zetas[1, :]
+      nom_cost1_k[l1, l2] = nom_costs[0]
+      nom_cost1_k[l1, l2] = nom_costs[1]
 
       if k == 0:
         print('Subgame', l1, l2, 'compiled.')
 
-  subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k)
+  subgame_k = (
+      Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k, nom_cost1_k,
+      nom_cost2_k
+  )
 
   # Evolves GiNOD.
   z_dot_k, H_k, PoI1_k, PoI2_k = GiNOD.cont_time_dyn(x_jnt, None, subgame_k)
@@ -419,8 +431,7 @@ for k in range(N_sim):
   x[:, k + 1] = np.asarray(solver_tmp._best_operating_point[0])[:, 1]
 
   # print(x_jnt)
-  print(z[:, k])
-  # print(PoI1_k, PoI2_k)
+  print(np.round(z[:, k], 3), PoI1_k, PoI2_k)
 
 # Saves results for plotting.
 np.save(

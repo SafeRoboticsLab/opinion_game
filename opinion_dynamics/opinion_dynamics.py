@@ -132,7 +132,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           xe = x_ph - x_ph_nom[:, l1, l2]  # error state
           Z_sub = Z_P1[:, :, l1, l2]
           zeta_sub = zeta_P1[:, l1, l2]
-          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          nom_cost_sub = nom_cost_P1[l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe + nom_cost_sub
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
@@ -148,7 +149,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           xe = x_ph - x_ph_nom[:, l1, l2]  # error state
           Z_sub = Z_P2[:, :, l1, l2]
           zeta_sub = zeta_P2[:, l1, l2]
-          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          nom_cost_sub = nom_cost_P2[l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe + nom_cost_sub
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
@@ -167,7 +169,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           xe = x_ph - x_ph_nom[:, l1, l2]  # error state
           Z_sub = Z_P1[:, :, l1, l2]
           zeta_sub = zeta_P1[:, l1, l2]
-          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          nom_cost_sub = nom_cost_P1[l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe + nom_cost_sub
           V_subs = V_subs.at[l1].set(V_sub)
 
         # Normalize to avoid large numbers.
@@ -199,9 +202,10 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
         # Inner loop over P2's (ego) options.
         for l2 in range(self._num_opn_P2):
           xe = x_ph - x_ph_nom[:, l1, l2]  # error state
-          Z_sub = Z_P1[:, :, l1, l2]
-          zeta_sub = zeta_P1[:, l1, l2]
-          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          Z_sub = Z_P2[:, :, l1, l2]
+          zeta_sub = zeta_P2[:, l1, l2]
+          nom_cost_sub = nom_cost_P2[l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe + nom_cost_sub
           V_subs = V_subs.at[l2].set(V_sub)
 
         # Normalize to avoid large numbers.
@@ -225,7 +229,10 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     def false_fn(PoI):
       return 1.0
 
-    Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2 = subgame
+    (
+        Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2, nom_cost_P1,
+        nom_cost_P2
+    ) = subgame
 
     # State variables.
     x_ph1 = x[self._x_indices_P1]
@@ -311,7 +318,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           xe = x_ph - x_ph_nom[:, l1, l2]  # error state
           Z_sub = Z_P1[:, :, l1, l2]
           zeta_sub = zeta_P1[:, l1, l2]
-          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          nom_cost_sub = nom_cost_P1[l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe + nom_cost_sub
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
@@ -327,11 +335,15 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
           xe = x_ph - x_ph_nom[:, l1, l2]  # error state
           Z_sub = Z_P2[:, :, l1, l2]
           zeta_sub = zeta_P2[:, l1, l2]
-          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe
+          nom_cost_sub = nom_cost_P2[l1, l2]
+          V_sub = xe.T @ Z_sub @ xe + zeta_sub.T @ xe + nom_cost_sub
           V_hat += softmax(z1, l1) * softmax(z2, l2) * V_sub
       return V_hat
 
-    Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2 = subgame
+    (
+        Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2, nom_cost_P1,
+        nom_cost_P2
+    ) = subgame
 
     # State variables.
     z = jnp.hstack((z1, z2))

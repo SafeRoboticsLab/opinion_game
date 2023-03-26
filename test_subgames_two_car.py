@@ -246,7 +246,7 @@ u_constraints_car_H = BoxConstraint(
     lower=jnp.hstack((a_min, w_min)), upper=jnp.hstack((a_max, w_max))
 )
 
-# Sets up intent-dependent cost
+# Sets up parameter-dependent cost
 for car_R_opn in [1, 2]:
   for car_H_opn in [1, 2]:
 
@@ -273,20 +273,22 @@ for car_R_opn in [1, 2]:
       car_H_goal_py = config.GOAL_PY_2
       car_H_goal_weight = config.GOAL_W_P2_2
 
-    # Tracks the target lane (y-position).
-    car_R_goal_py_cost = ReferenceDeviationCost(
-        reference=car_R_goal_py, dimension=car_R_py_index, is_x=True,
-        name="car_R_goal_py", horizon=HORIZON_STEPS, x_dim=x_dim,
+    # Rewards the target toll booth.
+    car_R_tgt_booth_cost = ReferenceDeviationCostPxDependent(
+        reference=car_R_goal_py, dimension=car_R_py_index,
+        px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
+        name="car_R_tgt_booth_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
         ui_dim=car_R._u_dim
     )
-    car_H_goal_py_cost = ReferenceDeviationCost(
-        reference=car_H_goal_py, dimension=car_H_py_index, is_x=True,
-        name="car_H_goal_py", horizon=HORIZON_STEPS, x_dim=x_dim,
+    car_H_tgt_booth_cost = ReferenceDeviationCostPxDependent(
+        reference=car_H_goal_py, dimension=car_H_py_index,
+        px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
+        name="car_H_tgt_booth_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
         ui_dim=car_H._u_dim
     )
 
-    car_R_cost_subgame.add_cost(car_R_goal_py_cost, "x", car_R_goal_weight)
-    car_H_cost_subgame.add_cost(car_H_goal_py_cost, "x", car_H_goal_weight)
+    car_R_cost_subgame.add_cost(car_R_tgt_booth_cost, "x", car_R_goal_weight)
+    car_H_cost_subgame.add_cost(car_H_tgt_booth_cost, "x", car_H_goal_weight)
 
     # Sets up ILQSolver and solve the subgame.
     alpha_scaling = np.linspace(0.01, 2.0, config.ALPHA_SCALING_NUM)

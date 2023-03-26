@@ -1,11 +1,11 @@
 clear; close all; clc
 
 % Loads data.
-% game_param = '12';
+game_param = '22';
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
-% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
+xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 
-xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 
 XR_in = xs(1:4, :);
@@ -14,7 +14,7 @@ XH_in = xs(5:8, :);
 % Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 12;
+option.t_skip     = 10;
 option.N_interp   = 1;
 option.t_start    = 1;
 option.t_end      = [];
@@ -210,13 +210,13 @@ return
 
 %% Plot demo opinions
 close all
-% zs = double(readNPY(strcat('two_car/two_car_12_zs_replan.npy')));
+zs = double(readNPY(strcat('two_car/two_car_22_zs_replan.npy')));
 
-zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
 
-t_end = 90;
+t_end = 130;
 
-% P1's opinion
+% P1's opinion (softmax)
 sigma_z1 = softmax(zs(1:2, 1:t_end));
 figure('Color','white')
 set(gca,'FontSize',fs)
@@ -228,7 +228,7 @@ ylabel('$\sigma(z^1)$', 'Interpreter','latex')
 legend('$\sigma_1(z^1)$','$\sigma_2(z^1)$', 'Interpreter','latex')
 ylim([-0.2, 1.2])
 
-% P2's opinion
+% P2's opinion (softmax)
 sigma_z2 = softmax(zs(3:4, 1:t_end));
 figure('Color','white')
 set(gca,'FontSize',fs)
@@ -239,6 +239,28 @@ xlabel('Time step', 'Interpreter','latex')
 ylabel('$\sigma(z^2)$', 'Interpreter','latex')
 legend('$\sigma_1(z^2)$','$\sigma_2(z^2)$', 'Interpreter','latex')
 ylim([-0.2, 1.2])
+
+% P1's opinion
+z1 = zs(1:2, 1:t_end);
+figure('Color','white')
+set(gca,'FontSize',fs)
+hold on
+plot(z1(1,:), 'LineWidth', 2)
+plot(z1(2,:), 'LineWidth', 2)
+xlabel('Time step', 'Interpreter','latex')
+ylabel('$z^1$', 'Interpreter','latex')
+legend('$z^1_1$','$z^1_2$', 'Interpreter','latex')
+
+% P2's opinion
+z2 = zs(3:4, 1:t_end);
+figure('Color','white')
+set(gca,'FontSize',fs)
+hold on
+plot(z2(1,:), 'LineWidth', 2)
+plot(z2(2,:), 'LineWidth', 2)
+xlabel('Time step', 'Interpreter','latex')
+ylabel('$z^2$', 'Interpreter','latex')
+legend('$z^2_1$','$z^2_2$', 'Interpreter','latex')
 
 % P1's attention
 att1 = zs(5, 1:t_end);

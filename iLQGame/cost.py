@@ -171,10 +171,6 @@ class Cost(object):
     )
     return Hxxs, Huus
 
-  def render(self, ax=None):
-    """ Optional rendering on the given axes. """
-    raise NotImplementedError("render is not implemented.")
-
 
 class ObstacleCost(Cost):
 
@@ -222,13 +218,6 @@ class ObstacleCost(Cost):
     relative_distance = jnp.sqrt(dx*dx + dy*dy)
 
     return jnp.minimum(relative_distance - self._max_distance, 0.)**2
-
-  def render(self, ax=None):
-    """ Render this obstacle on the given axes. """
-    circle = plt.Circle((self._point.x, self._point.y), self._max_distance,
-                        color="r", fill=True, alpha=0.75)
-    ax.add_artist(circle)
-    ax.text(self._point.x - 1.25, self._point.y - 1.25, "obs", fontsize=8)
 
 
 class ProductStateProximityCostTwoPlayer(Cost):
@@ -525,6 +514,47 @@ class ReferenceDeviationCost(Cost):
       return (ui[self._dimension] - self.reference)**2
 
 
+class ReferenceDeviationCostPxDependent(Cost):
+
+  def __init__(
+      self, reference, px_lb, px_dim, dimension=None, name="", horizon=None,
+      x_dim=None, ui_dim=None
+  ):
+    """
+    Reference trajectory following cost, dependent on px.
+    """
+    self.reference = reference
+    self._dimension = dimension
+    self._px_lb = px_lb
+    self._px_dim = px_dim
+    super(ReferenceDeviationCostPxDependent,
+          self).__init__(name, horizon, x_dim, ui_dim)
+
+  @partial(jit, static_argnums=(0,))
+  def get_cost(
+      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
+  ) -> DeviceArray:
+    """
+    Evaluates this cost function on the given input state and/or control.
+
+    Args:
+        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
+        ui (DeviceArray, optional): control of the subsystem (nui,)
+        k (int, optional): time step. Defaults to 0.
+
+    Returns:
+        DeviceArray: scalar value of cost (scalar)
+    """
+
+    def true_fn(x):
+      return (x[self._dimension] - self.reference)**2
+
+    def false_fn(x):
+      return 0.
+
+    return lax.cond(x[self._px_dim] >= self._px_lb, true_fn, false_fn, x)
+
+
 class OpnWeightedReferenceDeviationCost(Cost):
 
   def __init__(
@@ -743,12 +773,6 @@ class SemiquadraticPolylineCost(Cost):
         abs_signed_distance > self._distance_threshold, true_fn, false_fn,
         abs_signed_distance
     )
-
-  def render(self, ax=None):
-    """ Render this cost on the given axes. """
-    xs = [pt.x for pt in self._polyline.points]
-    ys = [pt.y for pt in self._polyline.points]
-    ax.plot(xs, ys, "k", alpha=0.25)
 
 
 class BoxInputConstraintCost(Cost):

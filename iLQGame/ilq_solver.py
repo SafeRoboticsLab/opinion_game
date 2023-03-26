@@ -93,6 +93,7 @@ class ILQSolver(object):
       # Line search based on social cost.
       total_cost_best_ls = np.Inf
       best_alphas = self._alphas
+      best_nom_costs = []
       for alpha_scaling in self._alpha_scaling:
         current_alphas = self._alphas
         current_alphas = [
@@ -108,6 +109,7 @@ class ILQSolver(object):
           us_list = us_list_alpha
           best_alphas = current_alphas
           total_cost_best_ls = total_cost_alpha
+          best_nom_costs = [jnp.sum(costis) for costis in costs_alpha]
 
       if self._verbose:
         print("[iLQ] Reference computing time: ", time.time() - tt)
@@ -151,7 +153,7 @@ class ILQSolver(object):
       # Updates the operating points.
       self._last_operating_point = self._current_operating_point
       self._current_operating_point = (
-          xs, us_list, current_Ps, best_alphas, Zs, zetas
+          xs, us_list, current_Ps, best_alphas, Zs, zetas, best_nom_costs
       )
 
       self._last_social_cost = self._current_social_cost
