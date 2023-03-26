@@ -1,11 +1,12 @@
 clear; close all; clc
 
 % Loads data.
-% game_param = '22';
+% game_param = '12';
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 
 xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
@@ -13,10 +14,10 @@ XH_in = xs(5:8, :);
 % Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 10;
+option.t_skip     = 12;
 option.N_interp   = 1;
 option.t_start    = 1;
-option.t_end      = 110;
+option.t_end      = [];
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;
@@ -83,7 +84,7 @@ if ~option.UI
 end
 hold on
 daspect([1,1,1])
-xlimSpan = [-20, 100];
+xlimSpan = [-15, 110];
 ylimSpan = [-6, 13];
 xlim(xlimSpan)
 ylim(ylimSpan)
@@ -209,13 +210,11 @@ return
 
 %% Plot demo opinions
 close all
-% zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_12_zs_replan.npy')));
 
-z_normalizer = 1.0;
+zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
 
-zs = double(readNPY(strcat('two_car/two_car_L1L0_zs.npy'))) / z_normalizer;
-
-t_end = 70;
+t_end = 90;
 
 % P1's opinion
 sigma_z1 = softmax(zs(1:2, 1:t_end));
