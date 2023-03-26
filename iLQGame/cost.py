@@ -61,7 +61,7 @@ class Cost(object):
         ui (DeviceArray): control of the subsystem (nui, N)
 
     Returns:
-        DeviceArray: costs (N,) 
+        DeviceArray: costs (N,)
     """
 
     @jit
