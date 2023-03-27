@@ -33,7 +33,7 @@ car_R_opn = 2
 car_H_opn = 2
 
 # Simulation horizon.
-N_sim = 150
+N_sim = 130
 
 ################################################################################
 # Sets up subgames
@@ -367,8 +367,8 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P2_bias=z_bias,
     T=TIME_RES,
     damping_opn=0.1,
-    damping_att=0.8,
-    rho=0.7,
+    damping_att=[0.8, 0.8],  # [0.8, 0.6]
+    rho=0.7
 )
 
 for k in range(N_sim):

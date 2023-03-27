@@ -29,7 +29,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
   def __init__(
       self, x_indices_P1, x_indices_P2, z_indices_P1, z_indices_P2,
       att_indices_P1, att_indices_P2, z_P1_bias, z_P2_bias, damping_opn=0.0,
-      damping_att=0.0, rho=1.0, T=0.1, z_norm_thresh=10.0
+      damping_att=[0.0, 0.0], rho=1.0, T=0.1, z_norm_thresh=10.0
   ):
     """
     Initializer.
@@ -281,8 +281,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     z2_norm = jnp.linalg.norm(z2)
     PoI_2 = lax.cond(z2_norm <= self._z_norm_thresh, true_fn, false_fn, PoI_2)
 
-    att1_dot = -self._damping_att * att1 + self._rho * (PoI_1-1.0)
-    att2_dot = -self._damping_att * att2 + self._rho * (PoI_2-1.0)
+    att1_dot = -self._damping_att[0] * att1 + self._rho * (PoI_1-1.0)
+    att2_dot = -self._damping_att[1] * att2 + self._rho * (PoI_2-1.0)
 
     # Joint state time derivative.
     x_jnt_dot = jnp.hstack((z_dot, att1_dot, att2_dot))
