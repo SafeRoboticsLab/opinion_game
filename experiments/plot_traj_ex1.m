@@ -17,7 +17,7 @@ option.is_fading  = false;
 option.t_skip     = 15;
 option.N_interp   = 1;
 option.t_start    = 1;
-option.t_end      = 130;
+option.t_end      = 110;
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;
@@ -210,7 +210,7 @@ return
 
 %% Plot demo opinions
 close all
-zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
+zs = double(readNPY(strcat('two_car/two_car_21_zs_replan.npy')));
 
 % zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
 
@@ -259,7 +259,7 @@ xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$z^1$', 'Interpreter','latex')
 leg = legend('$z^1_1$','$z^1_2$', 'Interpreter','latex');
 set(leg,'Box','off')
-ylim([-6, 6])
+ylim([-7, 7])
 
 % P2's opinion
 z2 = zs(3:4, 1:t_end);
@@ -273,7 +273,7 @@ xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$z^2$', 'Interpreter','latex')
 leg = legend('$z^2_1$','$z^2_2$', 'Interpreter','latex');
 set(leg,'Box','off')
-ylim([-6, 6])
+ylim([-7, 7])
 
 % % P1's attention
 % att1 = zs(5, 1:t_end);

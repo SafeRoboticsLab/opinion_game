@@ -29,8 +29,8 @@ LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
 
 # Options.
-car_R_opn = 2
-car_H_opn = 2
+car_R_opn = 1
+car_H_opn = 1
 
 # Simulation horizon.
 N_sim = 130
@@ -336,7 +336,7 @@ car_R_theta0 = 0.0
 car_R_v0 = 5.0
 car_R_x0 = np.array([car_R_px0, car_R_py0, car_R_theta0, car_R_v0])
 
-car_H_px0 = 2.0
+car_H_px0 = 0.0
 car_H_py0 = 0.0
 car_H_theta0 = 0.0
 car_H_v0 = 5.0
@@ -367,8 +367,8 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P2_bias=z_bias,
     T=TIME_RES,
     damping_opn=0.1,
-    damping_att=[0.8, 0.8],  # [0.8, 0.6]
-    rho=0.7
+    damping_att=[0.7, 0.7],
+    rho=[0.7, 0.7],
 )
 
 for k in range(N_sim):
