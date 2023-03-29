@@ -207,103 +207,159 @@ class QMDP(object):
   ) -> np.ndarray:
     """
     Level-1 QMDP planning.
-    Assumes two player.
+    Assumes two player two option.
     """
+
+    def softmax_cas(z, idx):
+      return exp(z[idx]) / sum1(exp(z))
+
     nz1 = self._GiNOD._num_opn_P1
     nz2 = self._GiNOD._num_opn_P2
 
-    # Creates a grid of ego's actions.
-    nu = len(self._W_ctrl)
-    config = self._config
-    A_MIN = config.A_MIN
-    A_MAX = config.A_MAX
-    W_MIN = config.W_MIN
-    W_MAX = config.W_MAX
-    _res_a = 0.015
-    _res_w = 0.002
+    # Creates the optimization problem.
+    opti = Opti()
 
-    # N_grid = 10000
-    # key = jax.random.PRNGKey(758493)
-    # us_ego = jax.random.uniform(
-    #     key, shape=((nu, 10000)), minval=jnp.array([[A_MIN, W_MIN]]).T,
-    #     maxval=jnp.array([[A_MAX, W_MAX]]).T
-    # )
-
-    us_ego = jnp.mgrid[A_MIN:A_MAX:_res_a, W_MIN:W_MAX:_res_w]
-    N_grid = us_ego.shape[1] * us_ego.shape[2]
-    us_ego = us_ego.reshape(nu, N_grid)
-
-    # Gets the players' most likely opinions.
+    # Gets the ego's most likely opinions.
     opn_ego = np.argmax(softmax(z_ego))
     opn_opp = np.argmax(softmax(z_opp))
 
-    # Gets the opponent's control.
+    # Gets the opponent's subgame controls and ego's nominal control.
     if self._player_id == 1:
-      U_ego = subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      U_opp = subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-    elif self._player_id == 2:
-      U_opp = subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      U_ego = subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-    U_ego = np.asarray(U_ego)
-    U_opp = np.asarray(U_opp)
-    u_ego_nom = U_ego[:, 0]
-    u_opp = U_opp[:, :1]
+      uo_0 = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
+      )[:, :1]
 
-    us_opp = np.tile(u_opp, N_grid)
+      uo11_1 = np.asarray(subgames[0][0]._best_operating_point[1][1])[:, 1:2]
+      uo12_1 = np.asarray(subgames[0][1]._best_operating_point[1][1])[:, 1:2]
+      uo21_1 = np.asarray(subgames[1][0]._best_operating_point[1][1])[:, 1:2]
+      uo22_1 = np.asarray(subgames[1][1]._best_operating_point[1][1])[:, 1:2]
+
+      ue_nom_0 = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
+      )[:, :1]
+      ue_nom_1 = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
+      )[:, 1:2]
+
+    elif self._player_id == 2:
+      uo_0 = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
+      )[:, :1]
+
+      uo11_1 = np.asarray(subgames[0][0]._best_operating_point[1][0])[:, 1:2]
+      uo12_1 = np.asarray(subgames[0][1]._best_operating_point[1][0])[:, 1:2]
+      uo21_1 = np.asarray(subgames[1][0]._best_operating_point[1][0])[:, 1:2]
+      uo22_1 = np.asarray(subgames[1][1]._best_operating_point[1][0])[:, 1:2]
+
+      ue_nom_0 = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
+      )[:, :1]
+      ue_nom_1 = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
+      )[:, 1:2]
+
+    # Declares the decision variable (ego's control).
+    nu = len(self._W_ctrl)
+    u_ego = opti.variable(nu, 2)
+
+    # Computes the subgame joint states.
     if self._player_id == 1:
-      us = np.vstack((us_ego, us_opp))
+      u_jnt_0 = vertcat(u_ego[:, :1], uo_0)
+
+      u_jnt11_1 = vertcat(u_ego[:, 1:], uo11_1)
+      u_jnt12_1 = vertcat(u_ego[:, 1:], uo12_1)
+      u_jnt21_1 = vertcat(u_ego[:, 1:], uo21_1)
+      u_jnt22_1 = vertcat(u_ego[:, 1:], uo22_1)
+
     elif self._player_id == 2:
-      us = np.vstack((us_opp, us_ego))
+      u_jnt_0 = vertcat(uo_0, u_ego[:, :1])
 
-    # Computes the next physical state.
-    xs_next = self._disc_dyn_vmap(x, us)
+      u_jnt11_1 = vertcat(uo11_1, u_ego[:, 1:])
+      u_jnt12_1 = vertcat(uo12_1, u_ego[:, 1:])
+      u_jnt21_1 = vertcat(uo21_1, u_ego[:, 1:])
+      u_jnt22_1 = vertcat(uo22_1, u_ego[:, 1:])
 
-    # Computes the next opinion state.
+    x_next_1 = self._ph_sys.disc_time_dyn_cas(x[np.newaxis].T, u_jnt_0)
+
+    x_next11_2 = self._ph_sys.disc_time_dyn_cas(x_next_1, u_jnt11_1)
+    x_next12_2 = self._ph_sys.disc_time_dyn_cas(x_next_1, u_jnt12_1)
+    x_next21_2 = self._ph_sys.disc_time_dyn_cas(x_next_1, u_jnt21_1)
+    x_next22_2 = self._ph_sys.disc_time_dyn_cas(x_next_1, u_jnt22_1)
+
+    x_next_2 = [[x_next11_2, x_next12_2], [x_next21_2, x_next22_2]]
+
+    # Computes the next opinions.
     if self._player_id == 1:
-      zs_next = self._GiNOD_dyn_vmap(
-          xs_next, z_ego, z_opp, att_ego, att_opp, None, subgame_k
-      )
-    elif self._player_id == 2:
-      zs_next = self._GiNOD_dyn_vmap(
-          xs_next, z_opp, z_ego, att_opp, att_ego, None, subgame_k
-      )
+      z1 = z_ego
+      z2 = z_opp
+      att1 = att_ego
+      att2 = att_opp
 
-    # Evaluates the cost and picks the best action.
-    Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, _, _ = subgame_k
-    xnom11 = xnom_k[:, 0, 0]
-    xnom12 = xnom_k[:, 0, 1]
-    xnom21 = xnom_k[:, 1, 0]
-    xnom22 = xnom_k[:, 1, 1]
-    if self._player_id == 1:
-      Z_k = Z1_k
-      zeta_k = zeta1_k
     elif self._player_id == 2:
-      Z_k = Z2_k
-      zeta_k = zeta2_k
-    Z11 = Z_k[:, :, 0, 0]
-    Z12 = Z_k[:, :, 0, 1]
-    Z21 = Z_k[:, :, 1, 0]
-    Z22 = Z_k[:, :, 1, 1]
-    zeta11 = zeta_k[:, 0, 0]
-    zeta12 = zeta_k[:, 0, 1]
-    zeta21 = zeta_k[:, 1, 0]
-    zeta22 = zeta_k[:, 1, 1]
-    _cost_params = (
-        u_ego_nom, xnom11, xnom12, xnom21, xnom22, Z11, Z12, Z21, Z22, zeta11,
-        zeta12, zeta21, zeta22
+      z1 = z_opp
+      z2 = z_ego
+      att1 = att_opp
+      att2 = att_ego
+
+    z_next = self._GiNOD.disc_dyn_two_player_casadi(
+        x_next_1, z1, z2, att1, att2, None, subgame_k
     )
+    z1_next = z_next[:2]
+    z2_next = z_next[2:]
 
-    costs = self._l1_cost_vmap(
-        xs_next, zs_next[:nz1, :], zs_next[nz1:nz1 + nz2, :], us_ego,
-        _cost_params
-    )
+    # Sets the objective function.
+    J = (u_ego[:, 0] - ue_nom_0).T @ self._W_ctrl @ (u_ego[:, 0] - ue_nom_0)
+    J += (u_ego[:, 1] - ue_nom_1).T @ self._W_ctrl @ (u_ego[:, 1] - ue_nom_1)
 
-    idx_min = jnp.argmin(costs)
+    for l1 in range(nz1):
+      for l2 in range(nz2):
+        solver = subgames[l1][l2]
+        xs_ILQ = np.asarray(solver._best_operating_point[0])
+        xnom = xs_ILQ[:, self._look_ahead + 1]
+        xnom = xnom[np.newaxis].T
+        Zs = np.asarray(solver._best_operating_point[4])[:, :, :, 1]
+        zetas = np.asarray(solver._best_operating_point[5])[:, :, 1]
+        if self._player_id == 1:
+          Z_ego = Zs[0, :, :]
+          zeta_ego = zetas[0, :]
+        elif self._player_id == 2:
+          Z_ego = Zs[1, :, :]
+          zeta_ego = zetas[1, :]
 
-    # Gets the optimal action.
-    u_ego = us_ego[:, idx_min]
-    u_ego = np.asarray(u_ego)
+        J += softmax_cas(z1_next, l1) * softmax_cas(z2_next, l2) * (
+            (x_next_2[l1][l2] - xnom).T @ Z_ego @ (x_next_2[l1][l2] - xnom)
+            + zeta_ego[np.newaxis] @ (x_next_2[l1][l2] - xnom)
+        )
 
-    # print(u_ego, u_ego_nom)
+    opti.minimize(J)
 
-    return u_ego
+    # Defines control constraints. TODO: generalize to arbitrary u dimension.
+    config = self._config
+    opti.subject_to(opti.bounded(config.A_MIN, u_ego[0, :], config.A_MAX))
+    opti.subject_to(opti.bounded(config.W_MIN, u_ego[1, :], config.W_MAX))
+
+    # Solves the optimization.
+    opts = {
+        "expand": True,
+        "ipopt.max_iter": 500,
+        "ipopt.acceptable_tol": 1e-4,
+        "ipopt.bound_frac": 0.5,
+        "ipopt.acceptable_iter": 5,
+        # "ipopt.linear_solver": "ma57"
+    }
+
+    # Disables solver reports.
+    opts.update({'ipopt.print_level': 0, 'print_time': 0, 'ipopt.sb': 'yes'})
+
+    # Sets numerical backend.
+    opti.solver("ipopt", opts)
+
+    try:
+      sol = opti.solve()  # actual solve
+    except:
+      sol = opti.debug
+
+    u_ego_sol = sol.value(u_ego[:, 0])
+    u_ego_sol = u_ego_sol.reshape(-1)
+
+    return u_ego_sol

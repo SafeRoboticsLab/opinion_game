@@ -2,9 +2,9 @@ clear; close all; clc
 
 % Loads data.
 game_param = '22';
-xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 
-% xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
+xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 
 XR_in = xs(1:4, :);
@@ -13,11 +13,11 @@ XH_in = xs(5:8, :);
 % Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 15;
+option.t_skip     = 5;
 option.N_interp   = 1;
 option.t_start    = 1;
 option.t_end      = [];
-option.pause      = 0;
+option.pause      = 0.1;
 option.UI         = false;
 option.fps = Inf;
 

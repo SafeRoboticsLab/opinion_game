@@ -7,7 +7,7 @@ Author: Haimin Hu (haiminh@princeton.edu)
 
 import numpy as np
 from typing import Tuple
-from casadi import vertcat
+from casadi import vertcat, horzcat, kron
 
 import jax
 from functools import partial
@@ -373,21 +373,22 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
     return z + self._T * z_dot
 
-  def disc_dyn_casadi(
+  def disc_dyn_two_player_casadi(
       self, x_ph, z1, z2, att1, att2, ctrl=None, subgame: Tuple = ()
   ):
     """
-    Computes the next opinion state.
-    This is an autonomous system.
-
+    Computes the next opinion state using the analytical GiNOD.
     For optimization in casadi.
     """
 
+    def softmax(z, idx):
+      return np.exp(z[idx]) / np.sum(np.exp(z))
+
     def phi_a(z):
-      raise NotImplementedError
+      return (softmax(z, 0) - softmax(z, 1)) * phi_b(z)
 
     def phi_b(z):
-      raise NotImplementedError
+      return softmax(z, 0) * softmax(z, 1)
 
     (
         Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2, nom_cost_P1,
@@ -397,29 +398,68 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     # State variables.
     z = jnp.hstack((z1, z2))
 
+    # Computes subgame value functions.
+    zeta1_11 = zeta_P1[:, 0, 0]
+    V1_11 = (x_ph - x_ph_nom[:, 0, 0]).T @ Z_P1[:, :, 0, 0] @ (
+        x_ph - x_ph_nom[:, 0, 0]
+    ) + zeta1_11[np.newaxis] @ (x_ph - x_ph_nom[:, 0, 0]) + nom_cost_P1[0, 0]
+    zeta1_12 = zeta_P1[:, 0, 1]
+    V1_12 = (x_ph - x_ph_nom[:, 0, 1]).T @ Z_P1[:, :, 0, 1] @ (
+        x_ph - x_ph_nom[:, 0, 1]
+    ) + zeta1_12[np.newaxis] @ (x_ph - x_ph_nom[:, 0, 1]) + nom_cost_P1[0, 1]
+    zeta1_21 = zeta_P1[:, 1, 0]
+    V1_21 = (x_ph - x_ph_nom[:, 1, 0]).T @ Z_P1[:, :, 1, 0] @ (
+        x_ph - x_ph_nom[:, 1, 0]
+    ) + zeta1_21[np.newaxis] @ (x_ph - x_ph_nom[:, 1, 0]) + nom_cost_P1[1, 0]
+    zeta1_22 = zeta_P1[:, 1, 1]
+    V1_22 = (x_ph - x_ph_nom[:, 1, 1]).T @ Z_P1[:, :, 1, 1] @ (
+        x_ph - x_ph_nom[:, 1, 1]
+    ) + zeta1_22[np.newaxis] @ (x_ph - x_ph_nom[:, 1, 1]) + nom_cost_P1[1, 1]
+
+    zeta2_11 = zeta_P2[:, 0, 0]
+    V2_11 = (x_ph - x_ph_nom[:, 0, 0]).T @ Z_P2[:, :, 0, 0] @ (
+        x_ph - x_ph_nom[:, 0, 0]
+    ) + zeta2_11[np.newaxis] @ (x_ph - x_ph_nom[:, 0, 0]) + nom_cost_P2[0, 0]
+    zeta2_12 = zeta_P2[:, 0, 1]
+    V2_12 = (x_ph - x_ph_nom[:, 0, 1]).T @ Z_P2[:, :, 0, 1] @ (
+        x_ph - x_ph_nom[:, 0, 1]
+    ) + zeta2_12[np.newaxis] @ (x_ph - x_ph_nom[:, 0, 1]) + nom_cost_P2[0, 1]
+    zeta2_21 = zeta_P2[:, 1, 0]
+    V2_21 = (x_ph - x_ph_nom[:, 1, 0]).T @ Z_P2[:, :, 1, 0] @ (
+        x_ph - x_ph_nom[:, 1, 0]
+    ) + zeta2_21[np.newaxis] @ (x_ph - x_ph_nom[:, 1, 0]) + nom_cost_P2[1, 0]
+    zeta2_22 = zeta_P2[:, 1, 1]
+    V2_22 = (x_ph - x_ph_nom[:, 1, 1]).T @ Z_P2[:, :, 1, 1] @ (
+        x_ph - x_ph_nom[:, 1, 1]
+    ) + zeta2_22[np.newaxis] @ (x_ph - x_ph_nom[:, 1, 1]) + nom_cost_P2[1, 1]
+
     # Computes game Hessians.
-    dVhat1_dz1 = jacfwd(Vhat1, argnums=0)
-    H1s = jacfwd(dVhat1_dz1, argnums=[0, 1])
-    H1 = jnp.hstack(H1s(znom_P1, znom_P2, x_ph))
+    a1 = phi_a(z1) * (
+        softmax(z2, 0) * (V1_11-V1_21) + softmax(z2, 1) * (V1_12-V1_22)
+    )
+    a2 = phi_a(z2) * (
+        softmax(z1, 0) * (V2_11-V2_12) + softmax(z1, 1) * (V2_21-V2_22)
+    )
+    b1 = phi_b(z1) * phi_b(z2) * (-V1_11 - V1_22 + V1_12 + V1_21)
+    b2 = phi_b(z1) * phi_b(z2) * (-V2_11 - V2_22 + V2_12 + V2_21)
 
-    dVhat2_dz2 = jacfwd(Vhat2, argnums=1)
-    H2s = jacfwd(dVhat2_dz2, argnums=[0, 1])
-    H2 = jnp.hstack(H2s(znom_P1, znom_P2, x_ph))
-
-    H1 = jax.nn.standardize(H1)  # Avoid large numbers.
-    H2 = jax.nn.standardize(H2)  # Avoid large numbers.
+    Gamma_1 = horzcat(a1, b1)
+    Gamma_2 = horzcat(b2, a2)
+    Gamma = vertcat(Gamma_1, Gamma_2)
+    H_tmp = np.array([[1, -1], [-1, 1]])
+    H = kron(Gamma, H_tmp)
 
     # Computes the opinion state time derivative.
-    att_1_vec = att1 * jnp.ones((self._num_opn_P1,))
-    att_2_vec = att2 * jnp.ones((self._num_opn_P2,))
+    att_1_vec = att1 * np.ones((self._num_opn_P1,))
+    att_2_vec = att2 * np.ones((self._num_opn_P2,))
+    att_vec = np.hstack((att_1_vec, att_2_vec))
 
-    D = jnp.diag(
-        self._damping_opn * jnp.ones(self._num_opn_P1 + self._num_opn_P2,)
+    D = np.diag(
+        self._damping_opn * np.ones(self._num_opn_P1 + self._num_opn_P2,)
     )
 
-    H1z = att_1_vec * jnp.tanh(H1@z + self._z_P1_bias)
-    H2z = att_2_vec * jnp.tanh(H2@z + self._z_P2_bias)
+    bias = np.hstack((self._z_P1_bias, self._z_P2_bias))
 
-    z_dot = -D @ z + jnp.hstack((H1z, H2z))
+    z_dot = -D @ z + att_vec * np.tanh(H@z + bias)
 
     return z + self._T * z_dot
