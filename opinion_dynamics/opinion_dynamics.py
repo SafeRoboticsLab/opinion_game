@@ -446,6 +446,9 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     Gamma_1 = horzcat(a1, b1)
     Gamma_2 = horzcat(b2, a2)
     Gamma = vertcat(Gamma_1, Gamma_2)
+
+    Gamma -= (a1+a2+b1+b2) / 4.0  # Normalize Gamma by subtracting the mean.
+
     H_tmp = np.array([[1, -1], [-1, 1]])
     H = kron(Gamma, H_tmp)
 

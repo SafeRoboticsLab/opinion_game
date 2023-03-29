@@ -149,7 +149,7 @@ class RHCPlanner(object):
       xs[:, k + 1] = np.asarray(x_ph_next)
 
       # print(x_jnt)
-      print(np.round(zs[:, k], 2), PoI1_k, PoI2_k)
+      print(k, np.round(zs[:, k], 2), PoI1_k, PoI2_k)
 
     self.xs = xs
     self.zs = zs

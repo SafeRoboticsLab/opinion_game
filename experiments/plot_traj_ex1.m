@@ -1,11 +1,11 @@
 clear; close all; clc
 
 % Loads data.
-game_param = '22';
+% game_param = '22';
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 
-xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
-% xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
+xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
@@ -209,7 +209,7 @@ return
 
 %% Plot demo opinions
 close all
-zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
+zs = double(readNPY(strcat('two_car/two_car_', game_param, '_zs_replan.npy')));
 
 % zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
 
