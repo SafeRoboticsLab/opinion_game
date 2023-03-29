@@ -29,8 +29,8 @@ LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
 
 # Options.
-car_R_opn = 2
-car_H_opn = 2
+car_R_opn = 1
+car_H_opn = 1
 
 # Simulation horizon.
 N_sim = 130
@@ -447,10 +447,3 @@ np.save(
         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_zs_replan.npy'
     ), z
 )
-
-# np.save(
-#     os.path.join(
-#         LOG_DIRECTORY,
-#         FILE_NAME + '_' + str(car_R_opn) + str(car_H_opn) + '_Hs_replan.npy'
-#     ), Hs
-# )

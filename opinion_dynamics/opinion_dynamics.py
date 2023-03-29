@@ -372,3 +372,54 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
     z_dot = -D @ z + jnp.hstack((H1z, H2z))
 
     return z + self._T * z_dot
+
+  def disc_dyn_casadi(
+      self, x_ph, z1, z2, att1, att2, ctrl=None, subgame: Tuple = ()
+  ):
+    """
+    Computes the next opinion state.
+    This is an autonomous system.
+
+    For optimization in casadi.
+    """
+
+    def phi_a(z):
+      raise NotImplementedError
+
+    def phi_b(z):
+      raise NotImplementedError
+
+    (
+        Z_P1, Z_P2, zeta_P1, zeta_P2, x_ph_nom, znom_P1, znom_P2, nom_cost_P1,
+        nom_cost_P2
+    ) = subgame
+
+    # State variables.
+    z = jnp.hstack((z1, z2))
+
+    # Computes game Hessians.
+    dVhat1_dz1 = jacfwd(Vhat1, argnums=0)
+    H1s = jacfwd(dVhat1_dz1, argnums=[0, 1])
+    H1 = jnp.hstack(H1s(znom_P1, znom_P2, x_ph))
+
+    dVhat2_dz2 = jacfwd(Vhat2, argnums=1)
+    H2s = jacfwd(dVhat2_dz2, argnums=[0, 1])
+    H2 = jnp.hstack(H2s(znom_P1, znom_P2, x_ph))
+
+    H1 = jax.nn.standardize(H1)  # Avoid large numbers.
+    H2 = jax.nn.standardize(H2)  # Avoid large numbers.
+
+    # Computes the opinion state time derivative.
+    att_1_vec = att1 * jnp.ones((self._num_opn_P1,))
+    att_2_vec = att2 * jnp.ones((self._num_opn_P2,))
+
+    D = jnp.diag(
+        self._damping_opn * jnp.ones(self._num_opn_P1 + self._num_opn_P2,)
+    )
+
+    H1z = att_1_vec * jnp.tanh(H1@z + self._z_P1_bias)
+    H2z = att_2_vec * jnp.tanh(H2@z + self._z_P2_bias)
+
+    z_dot = -D @ z + jnp.hstack((H1z, H2z))
+
+    return z + self._T * z_dot

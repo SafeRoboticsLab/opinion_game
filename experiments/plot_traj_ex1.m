@@ -1,11 +1,10 @@
 clear; close all; clc
 
 % Loads data.
-game_param = '11';
-% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs.npy')));
-% xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
+game_param = '22';
+xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 
-xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 
 XR_in = xs(1:4, :);
@@ -17,7 +16,7 @@ option.is_fading  = false;
 option.t_skip     = 15;
 option.N_interp   = 1;
 option.t_start    = 1;
-option.t_end      = 110;
+option.t_end      = [];
 option.pause      = 0;
 option.UI         = false;
 option.fps = Inf;
@@ -210,13 +209,13 @@ return
 
 %% Plot demo opinions
 close all
-zs = double(readNPY(strcat('two_car/two_car_22_zs_replan.npy')));
+zs = double(readNPY(strcat('two_car/two_car_11_zs_replan.npy')));
 
 % zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
 
 fs = 30;    % Font size
 ts = 0.2;
-t_end = 130;
+t_end = 120;
 fposition = [0 200 700 200];
 
 % % P1's opinion (softmax)
@@ -259,7 +258,8 @@ xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$z^1$', 'Interpreter','latex')
 leg = legend('$z^1_1$','$z^1_2$', 'Interpreter','latex');
 set(leg,'Box','off')
-ylim([-7, 7])
+xlim([0, 30])
+ylim([-6, 6])
 
 % P2's opinion
 z2 = zs(3:4, 1:t_end);
@@ -273,7 +273,8 @@ xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$z^2$', 'Interpreter','latex')
 leg = legend('$z^2_1$','$z^2_2$', 'Interpreter','latex');
 set(leg,'Box','off')
-ylim([-7, 7])
+xlim([0, 30])
+ylim([-6, 6])
 
 % % P1's attention
 % att1 = zs(5, 1:t_end);
