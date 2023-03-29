@@ -87,32 +87,54 @@ class QMDP(object):
     # Creates the optimization problem.
     opti = Opti()
 
-    # Gets the players' most likely opinions.
+    # Gets the ego's most likely opinions.
     opn_ego = np.argmax(softmax(z_ego))
     opn_opp = np.argmax(softmax(z_opp))
 
-    # Gets the opponent's control.
+    # Gets the opponent's subgame controls and ego's nominal control.
     if self._player_id == 1:
-      U_ego = subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      U_opp = subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-    elif self._player_id == 2:
-      U_opp = subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      U_ego = subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-    U_ego = np.asarray(U_ego)
-    U_opp = np.asarray(U_opp)
-    u_ego_nom = U_ego[:, :1]
-    u_opp = U_opp[:, :1]
+      u_opp11 = np.asarray(subgames[0][0]._best_operating_point[1][1])[:, :1]
+      u_opp12 = np.asarray(subgames[0][1]._best_operating_point[1][1])[:, :1]
+      u_opp21 = np.asarray(subgames[1][0]._best_operating_point[1][1])[:, :1]
+      u_opp22 = np.asarray(subgames[1][1]._best_operating_point[1][1])[:, :1]
 
-    # Declares the decision variable (control).
+      u_ego_nom = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
+      )[:, :1]
+
+    elif self._player_id == 2:
+      u_opp11 = np.asarray(subgames[0][0]._best_operating_point[1][0])[:, :1]
+      u_opp12 = np.asarray(subgames[0][1]._best_operating_point[1][0])[:, :1]
+      u_opp21 = np.asarray(subgames[1][0]._best_operating_point[1][0])[:, :1]
+      u_opp22 = np.asarray(subgames[1][1]._best_operating_point[1][0])[:, :1]
+
+      u_ego_nom = np.asarray(
+          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
+      )[:, :1]
+
+    # Declares the decision variable (ego's control).
     nu = len(self._W_ctrl)
-    u_ego = opti.variable(nu,)  # ego's control.
+    u_ego = opti.variable(nu,)
 
-    # Computes the next joint state.
+    # Computes the subgame joint states.
     if self._player_id == 1:
-      u_jnt = vertcat(u_ego, u_opp)
+      u_jnt11 = vertcat(u_ego, u_opp11)
+      u_jnt12 = vertcat(u_ego, u_opp12)
+      u_jnt21 = vertcat(u_ego, u_opp21)
+      u_jnt22 = vertcat(u_ego, u_opp22)
+
     elif self._player_id == 2:
-      u_jnt = vertcat(u_opp, u_ego)
-    x_next = self._ph_sys.disc_time_dyn_cas(x[np.newaxis].T, u_jnt)
+      u_jnt11 = vertcat(u_opp11, u_ego)
+      u_jnt12 = vertcat(u_opp12, u_ego)
+      u_jnt21 = vertcat(u_opp21, u_ego)
+      u_jnt22 = vertcat(u_opp22, u_ego)
+
+    x_next11 = self._ph_sys.disc_time_dyn_cas(x[np.newaxis].T, u_jnt11)
+    x_next12 = self._ph_sys.disc_time_dyn_cas(x[np.newaxis].T, u_jnt12)
+    x_next21 = self._ph_sys.disc_time_dyn_cas(x[np.newaxis].T, u_jnt21)
+    x_next22 = self._ph_sys.disc_time_dyn_cas(x[np.newaxis].T, u_jnt22)
+
+    x_next = [[x_next11, x_next12], [x_next21, x_next22]]
 
     # Sets the objective function.
     if self._player_id == 1:
@@ -123,7 +145,7 @@ class QMDP(object):
       z2 = z_ego
 
     J = (u_ego - u_ego_nom).T @ self._W_ctrl @ (u_ego-u_ego_nom)
-    # J = u_ego.T @ self._W_ctrl @ u_ego
+    # J = 0.
     for l1 in range(nz1):
       for l2 in range(nz2):
         solver = subgames[l1][l2]
@@ -140,9 +162,10 @@ class QMDP(object):
           zeta_ego = zetas[1, :]
         zeta_ego = zeta_ego[np.newaxis].T
 
-        J += softmax(z1, l1) * softmax(z2, l2) * ((x_next - xnom).T @ Z_ego
-                                                  @ (x_next-xnom)
-                                                  + zeta_ego.T @ (x_next-xnom))
+        J += softmax(z1, l1) * softmax(z2, l2) * (
+            (x_next[l1][l2] - xnom).T @ Z_ego @ (x_next[l1][l2] - xnom)
+            + zeta_ego.T @ (x_next[l1][l2] - xnom)
+        )
 
     opti.minimize(J)
 

@@ -59,6 +59,8 @@ class RHCPlanner(object):
       Z2_k = np.zeros((nx, nx, nz1, nz2))
       zeta1_k = np.zeros((nx, nz1, nz2))
       zeta2_k = np.zeros((nx, nz1, nz2))
+      nom_cost1_k = np.zeros((2, 2))
+      nom_cost2_k = np.zeros((2, 2))
       xnom_k = np.zeros((nx, nz1, nz2))
 
       # Solve subgames and collects subgame information.
@@ -70,27 +72,33 @@ class RHCPlanner(object):
           xnom_k[:, l1, l2] = xs_ILQ[:, self._look_ahead]
           Zs = np.asarray(solver._best_operating_point[4])[:, :, :, 0]
           zetas = np.asarray(solver._best_operating_point[5])[:, :, 0]
+          nom_costs = np.asarray(solver._best_operating_point[6])
           Z1_k[:, :, l1, l2] = Zs[0, :, :]
           Z2_k[:, :, l1, l2] = Zs[1, :, :]
           zeta1_k[:, l1, l2] = zetas[0, :]
           zeta2_k[:, l1, l2] = zetas[1, :]
+          nom_cost1_k[l1, l2] = nom_costs[0]
+          nom_cost2_k[l1, l2] = nom_costs[1]
 
           if k == 0:
             print('[RHC] Subgame', l1, l2, 'compiled.')
 
       if k == 0:
-        z1_nom = z0[:nz1]
-        z2_nom = z0[nz1:nz1 + nz2]
+        znom1_k = z0[:nz1]
+        znom2_k = z0[nz1:nz1 + nz2]
       else:
-        z1_nom = zs[:nz1, k - 1]
-        z2_nom = zs[nz1:nz1 + nz2, k - 1]
+        znom1_k = zs[:nz1, k - 1]
+        znom2_k = zs[nz1:nz1 + nz2, k - 1]
 
       z1_k = zs[:nz1, k]
       z2_k = zs[nz1:nz1 + nz2, k]
       att1_k = zs[nz1 + nz2:nz1 + nz2 + 1, k]
       att2_k = zs[-1, k]
 
-      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, z1_nom, z2_nom)
+      subgame_k = (
+          Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k, nom_cost1_k,
+          nom_cost2_k
+      )
 
       # Solves QMDP based on current subgames and opinion states.
       if self._method == 'QMDPL0':

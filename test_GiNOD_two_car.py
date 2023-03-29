@@ -19,7 +19,7 @@ from iLQGame.player_cost import PlayerCost
 from opinion_dynamics.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
 
 # Loads the config.
-config = load_config("example_two_car.yaml")
+config = load_config("example_two_car_subgame.yaml")
 
 # General parameters.
 TIME_HORIZON = config.TIME_HORIZON  # s
@@ -29,8 +29,8 @@ LOG_DIRECTORY = "experiments/two_car"
 FILE_NAME = "two_car"
 
 # Options.
-car_R_opn = 1
-car_H_opn = 1
+car_R_opn = 2
+car_H_opn = 2
 
 # Simulation horizon.
 N_sim = 130
@@ -410,7 +410,7 @@ for k in range(N_sim):
       zeta1_k[:, l1, l2] = zetas[0, :]
       zeta2_k[:, l1, l2] = zetas[1, :]
       nom_cost1_k[l1, l2] = nom_costs[0]
-      nom_cost1_k[l1, l2] = nom_costs[1]
+      nom_cost2_k[l1, l2] = nom_costs[1]
 
       if k == 0:
         print('Subgame', l1, l2, 'compiled.')

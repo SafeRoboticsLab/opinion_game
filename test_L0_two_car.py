@@ -247,46 +247,50 @@ car_R_alphas = jnp.zeros((car_R._u_dim, HORIZON_STEPS))
 car_H_alphas = jnp.zeros((car_H._u_dim, HORIZON_STEPS))
 
 # Sets up intent-dependent cost (Tracks the target lane (y-position)).
-car_R_goal_py_cost_1 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_1, dimension=car_R_py_index, is_x=True,
-    name="car_R_goal_py_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_R_tgt_booth_cost_1 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_1, dimension=car_R_py_index,
+    px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_R_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_R._u_dim
 )
-car_R_goal_py_cost_2 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_2, dimension=car_R_py_index, is_x=True,
-    name="car_R_goal_py_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_R_tgt_booth_cost_2 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_2, dimension=car_R_py_index,
+    px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_R_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_R._u_dim
 )
-car_H_goal_py_cost_1 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_1, dimension=car_H_py_index, is_x=True,
-    name="car_H_goal_py_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_H_tgt_booth_cost_1 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_1, dimension=car_H_py_index,
+    px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_H_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_H._u_dim
 )
-car_H_goal_py_cost_2 = ReferenceDeviationCost(
-    reference=config.GOAL_PY_2, dimension=car_H_py_index, is_x=True,
-    name="car_H_goal_py_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
+car_H_tgt_booth_cost_2 = ReferenceDeviationCostPxDependent(
+    reference=config.GOAL_PY_2, dimension=car_H_py_index,
+    px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
+    name="car_H_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_H._u_dim
 )
 
 car_R_cost_subgame11 = deepcopy(car_R_cost)
 car_H_cost_subgame11 = deepcopy(car_H_cost)
-car_R_cost_subgame11.add_cost(car_R_goal_py_cost_1, "x", config.GOAL_W_P1_1)
-car_H_cost_subgame11.add_cost(car_H_goal_py_cost_1, "x", config.GOAL_W_P2_1)
+car_R_cost_subgame11.add_cost(car_R_tgt_booth_cost_1, "x", config.GOAL_W_P1_1)
+car_H_cost_subgame11.add_cost(car_H_tgt_booth_cost_1, "x", config.GOAL_W_P2_1)
 
 car_R_cost_subgame12 = deepcopy(car_R_cost)
 car_H_cost_subgame12 = deepcopy(car_H_cost)
-car_R_cost_subgame12.add_cost(car_R_goal_py_cost_1, "x", config.GOAL_W_P1_1)
-car_H_cost_subgame12.add_cost(car_H_goal_py_cost_2, "x", config.GOAL_W_P2_2)
+car_R_cost_subgame12.add_cost(car_R_tgt_booth_cost_1, "x", config.GOAL_W_P1_1)
+car_H_cost_subgame12.add_cost(car_H_tgt_booth_cost_2, "x", config.GOAL_W_P2_2)
 
 car_R_cost_subgame21 = deepcopy(car_R_cost)
 car_H_cost_subgame21 = deepcopy(car_H_cost)
-car_R_cost_subgame21.add_cost(car_R_goal_py_cost_2, "x", config.GOAL_W_P1_2)
-car_H_cost_subgame21.add_cost(car_H_goal_py_cost_1, "x", config.GOAL_W_P2_1)
+car_R_cost_subgame21.add_cost(car_R_tgt_booth_cost_2, "x", config.GOAL_W_P1_2)
+car_H_cost_subgame21.add_cost(car_H_tgt_booth_cost_1, "x", config.GOAL_W_P2_1)
 
 car_R_cost_subgame22 = deepcopy(car_R_cost)
 car_H_cost_subgame22 = deepcopy(car_H_cost)
-car_R_cost_subgame22.add_cost(car_R_goal_py_cost_2, "x", config.GOAL_W_P1_2)
-car_H_cost_subgame22.add_cost(car_H_goal_py_cost_2, "x", config.GOAL_W_P2_2)
+car_R_cost_subgame22.add_cost(car_R_tgt_booth_cost_2, "x", config.GOAL_W_P1_2)
+car_H_cost_subgame22.add_cost(car_H_tgt_booth_cost_2, "x", config.GOAL_W_P2_2)
 
 # Sets up ILQSolvers for all subgames.
 alpha_scaling = np.linspace(0.01, 2.0, config.ALPHA_SCALING_NUM)
@@ -323,12 +327,8 @@ subgames = [[solver11, solver12], [solver21, solver22]]
 # RHC Planning
 ################################################################################
 # Initializes states.
-# car_R_px0 = -12.0
 car_R_px0 = -8.0
-
-# car_R_py0 = 1.0
 car_R_py0 = 0.5
-
 car_R_theta0 = 0.0
 car_R_v0 = 4.0
 car_R_x0 = np.array([car_R_px0, car_R_py0, car_R_theta0, car_R_v0])
@@ -340,8 +340,8 @@ car_H_v0 = 4.0
 car_H_x0 = np.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])
 
 jnt_x0 = np.concatenate([car_R_x0, car_H_x0], axis=0)
-# z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 0., 0.]))
-z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 1., 1.]))
+z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 0., 0.]))
+# z0 = np.array(([1e-2, -1e-2, -1e-2, 1e-2, 1., 1.]))
 
 # Creates the GiNOD.
 GiNOD = NonlinearOpinionDynamicsTwoPlayer(
@@ -354,9 +354,9 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P1_bias=0. * np.ones((2,)),
     z_P2_bias=0. * np.ones((2,)),
     T=TIME_RES,
-    damping_opn=0.0,
-    damping_att=0.5,
-    rho=1.5,
+    damping_opn=0.1,
+    damping_att=[0.7, 0.7],
+    rho=[0.7, 0.7],
 )
 
 # RHC planning and simulation.
