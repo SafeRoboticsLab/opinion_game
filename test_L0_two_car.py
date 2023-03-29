@@ -21,7 +21,7 @@ from planning.receding_horizon import RHCPlanner
 from planning.utils import TwoCar8D
 
 # Loads the config.
-config = load_config("example_two_car.yaml")
+config = load_config("configs/example_two_car_L0.yaml")
 
 # General parameters.
 TIME_HORIZON = config.TIME_HORIZON  # planning horizon (s)

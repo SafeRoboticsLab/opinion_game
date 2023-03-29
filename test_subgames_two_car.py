@@ -18,7 +18,7 @@ from iLQGame.ilq_solver import ILQSolver
 from iLQGame.player_cost import PlayerCost
 
 # Loads the config.
-config = load_config("example_two_car.yaml")
+config = load_config("configs/example_two_car.yaml")
 
 # General parameters.
 TIME_HORIZON = config.TIME_HORIZON  # s

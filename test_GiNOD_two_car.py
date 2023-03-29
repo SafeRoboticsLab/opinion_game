@@ -19,7 +19,7 @@ from iLQGame.player_cost import PlayerCost
 from opinion_dynamics.opinion_dynamics import NonlinearOpinionDynamicsTwoPlayer
 
 # Loads the config.
-config = load_config("example_two_car_subgame.yaml")
+config = load_config("configs/example_two_car_subgame.yaml")
 
 # General parameters.
 TIME_HORIZON = config.TIME_HORIZON  # s
