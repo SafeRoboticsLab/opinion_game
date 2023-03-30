@@ -1,20 +1,16 @@
 clear; close all; clc
 
-%% Loads data.
+% Loads data.
 % game_param = '22';
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
-% zs = double(readNPY(strcat('two_car/two_car_', game_param, '_zs_replan.npy')));
 
 xs = double(readNPY(strcat('two_car/two_car_L0_xs.npy')));
-zs = double(readNPY(strcat('two_car/two_car_L0_zs.npy')));
-
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
 
-
-%% Sets parameters.
+% Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
 option.t_skip     = 5;
@@ -219,33 +215,33 @@ ts = 0.2;
 t_end = 120;
 fposition = [0 200 700 200];
 
-% P1's opinion (softmax)
-sigma_z1 = softmax(zs(1:2, 1:t_end));
-f = figure('Color','white');
-f.Position = fposition;
-set(gca,'FontSize',fs)
-hold on
-plot((1:t_end)*ts, sigma_z1(1,:), 'LineWidth', 2)
-plot((1:t_end)*ts, sigma_z1(2,:), 'LineWidth', 2)
-xlabel('Time (s)', 'Interpreter','latex')
-ylabel('$\sigma(z^1)$', 'Interpreter','latex')
-leg = legend('$\sigma_1(z^1)$','$\sigma_2(z^1)$', 'Interpreter','latex');
-set(leg,'Box','off')
-ylim([-0.2, 1.2])
-
-% P2's opinion (softmax)
-sigma_z2 = softmax(zs(3:4, 1:t_end));
-f = figure('Color','white');
-f.Position = fposition;
-set(gca,'FontSize',fs)
-hold on
-plot((1:t_end)*ts, sigma_z2(1,:), 'LineWidth', 2)
-plot((1:t_end)*ts, sigma_z2(2,:), 'LineWidth', 2)
-xlabel('Time (s)', 'Interpreter','latex')
-ylabel('$\sigma(z^2)$', 'Interpreter','latex')
-leg = legend('$\sigma_1(z^2)$','$\sigma_2(z^2)$', 'Interpreter','latex');
-set(leg,'Box','off')
-ylim([-0.2, 1.2])
+% % P1's opinion (softmax)
+% sigma_z1 = softmax(zs(1:2, 1:t_end));
+% f = figure('Color','white');
+% f.Position = fposition;
+% set(gca,'FontSize',fs)
+% hold on
+% plot((1:t_end)*ts, sigma_z1(1,:), 'LineWidth', 2)
+% plot((1:t_end)*ts, sigma_z1(2,:), 'LineWidth', 2)
+% xlabel('Time (s)', 'Interpreter','latex')
+% ylabel('$\sigma(z^1)$', 'Interpreter','latex')
+% leg = legend('$\sigma_1(z^1)$','$\sigma_2(z^1)$', 'Interpreter','latex');
+% set(leg,'Box','off')
+% ylim([-0.2, 1.2])
+% 
+% % P2's opinion (softmax)
+% sigma_z2 = softmax(zs(3:4, 1:t_end));
+% f = figure('Color','white');
+% f.Position = fposition;
+% set(gca,'FontSize',fs)
+% hold on
+% plot((1:t_end)*ts, sigma_z2(1,:), 'LineWidth', 2)
+% plot((1:t_end)*ts, sigma_z2(2,:), 'LineWidth', 2)
+% xlabel('Time (s)', 'Interpreter','latex')
+% ylabel('$\sigma(z^2)$', 'Interpreter','latex')
+% leg = legend('$\sigma_1(z^2)$','$\sigma_2(z^2)$', 'Interpreter','latex');
+% set(leg,'Box','off')
+% ylim([-0.2, 1.2])
 
 % P1's opinion
 z1 = zs(1:2, 1:t_end);
@@ -277,29 +273,27 @@ set(leg,'Box','off')
 xlim([0, 30])
 ylim([-6, 6])
 
-% P1's attention
-att1 = zs(5, 1:t_end);
-f = figure('Color','white');
-f.Position = fposition;
-set(gca,'FontSize',fs)
-hold on
-plot((1:t_end)*ts, att1, 'LineWidth', 2)
-xlabel('Time (s)', 'Interpreter','latex')
-ylabel('$\lambda^1$', 'Interpreter','latex')
-ylim([-0.5, 4])
-
-% P2's attention
-att2 = zs(6, 1:t_end);
-f = figure('Color','white');
-f.Position = fposition;
-set(gca,'FontSize',fs)
-hold on
-plot((1:t_end)*ts, att2, 'LineWidth', 2)
-xlabel('Time (s)', 'Interpreter','latex')
-ylabel('$\lambda^2$', 'Interpreter','latex')
-ylim([-0.5, 4])
-
-return
+% % P1's attention
+% att1 = zs(5, 1:t_end);
+% f = figure('Color','white');
+% f.Position = fposition;
+% set(gca,'FontSize',fs)
+% hold on
+% plot((1:t_end)*ts, att1, 'LineWidth', 2)
+% xlabel('Time (s)', 'Interpreter','latex')
+% ylabel('$\lambda^1$', 'Interpreter','latex')
+% ylim([-0.5, 4])
+% 
+% % P2's attention
+% att2 = zs(6, 1:t_end);
+% f = figure('Color','white');
+% f.Position = fposition;
+% set(gca,'FontSize',fs)
+% hold on
+% plot((1:t_end)*ts, att2, 'LineWidth', 2)
+% xlabel('Time (s)', 'Interpreter','latex')
+% ylabel('$\lambda^2$', 'Interpreter','latex')
+% ylim([-0.5, 4])
 
 
 %% Plot Hs color map

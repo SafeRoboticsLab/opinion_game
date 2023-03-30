@@ -21,7 +21,7 @@ from planning.receding_horizon import RHCPlanner
 from planning.utils import TwoCar8D
 
 # Loads the config.
-config = load_config("configs/example_two_car_L0.yaml")
+config = load_config("configs/example_two_car_L0_1.yaml")
 
 # General parameters.
 TIME_HORIZON = config.TIME_HORIZON  # planning horizon (s)
@@ -354,7 +354,7 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P2_bias=0. * np.ones((2,)),
     T=TIME_RES,
     damping_opn=0.1,
-    damping_att=[0.5, 0.5],  # [0.7, 0.7]
+    damping_att=[0.7, 0.7],  # [0.7, 0.7]
     rho=[0.8, 0.8],  # [0.7, 0.7]
 )
 
