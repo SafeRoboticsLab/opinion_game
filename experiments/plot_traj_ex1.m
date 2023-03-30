@@ -313,3 +313,9 @@ for time = 17
     set(gca,'FontSize',fs)
     title(strcat('step=',num2str(time)), 'Interpreter','latex')
 end
+
+
+function res = softmax(z)
+    C = 0.3;
+    res = exp(C*z) ./ sum(exp(C*z));
+end

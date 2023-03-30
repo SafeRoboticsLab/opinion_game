@@ -21,7 +21,7 @@ from planning.receding_horizon import RHCPlanner
 from planning.utils import TwoCar8D
 
 # Loads the config.
-config = load_config("configs/example_two_car_L0_1.yaml")
+config = load_config("configs/example_two_car_L0_2.yaml")
 
 # General parameters.
 TIME_HORIZON = config.TIME_HORIZON  # planning horizon (s)
@@ -369,7 +369,7 @@ planner = RHCPlanner(
 )
 planner.plan(jnt_x0, z0)
 
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_xs.npy'), planner.xs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_zs.npy'), planner.zs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_Hs.npy'), planner.Hs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_PoI.npy'), planner.PoI)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t2_xs.npy'), planner.xs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t2_zs.npy'), planner.zs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t2_Hs.npy'), planner.Hs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t2_PoI.npy'), planner.PoI)
