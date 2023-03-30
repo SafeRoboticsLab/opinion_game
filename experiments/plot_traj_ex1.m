@@ -8,7 +8,11 @@ clear; close all; clc
 xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
 zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
 
+% xs = double(readNPY(strcat('two_car/two_car_L0_t2_xs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_L0_t2_zs.npy')));
+
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_L1L0_zs.npy')));
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);
@@ -216,7 +220,6 @@ end
 
 fs = 30;    % Font size
 ts = 0.2;
-t_end = 120;
 fposition = [0 200 700 200];
 
 % P1's opinion (softmax)
@@ -260,7 +263,7 @@ ylabel('$z^1$', 'Interpreter','latex')
 leg = legend('$z^1_1$','$z^1_2$', 'Interpreter','latex');
 set(leg,'Box','off')
 xlim([0, 30])
-ylim([-6, 6])
+ylim([-8, 8])
 
 % P2's opinion
 z2 = zs(3:4, 1:t_end);
@@ -275,7 +278,7 @@ ylabel('$z^2$', 'Interpreter','latex')
 leg = legend('$z^2_1$','$z^2_2$', 'Interpreter','latex');
 set(leg,'Box','off')
 xlim([0, 30])
-ylim([-6, 6])
+ylim([-8, 8])
 
 % P1's attention
 att1 = zs(5, 1:t_end);
@@ -286,7 +289,7 @@ hold on
 plot((1:t_end)*ts, att1, 'LineWidth', 2)
 xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$\lambda^1$', 'Interpreter','latex')
-ylim([-0.5, 4])
+ylim([-0.5, 6])
 
 % P2's attention
 att2 = zs(6, 1:t_end);
@@ -297,9 +300,37 @@ hold on
 plot((1:t_end)*ts, att2, 'LineWidth', 2)
 xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$\lambda^2$', 'Interpreter','latex')
-ylim([-0.5, 4])
+ylim([-0.5, 6])
 
 return
+
+
+%% Plot PoI
+PoIs = double(readNPY(strcat('two_car/two_car_L0_t1_PoI.npy')));
+
+t_end = 120;
+
+% P1's PoI
+PoI1 = PoIs(1, 1:t_end);
+f = figure('Color','white');
+f.Position = fposition;
+set(gca,'FontSize',fs)
+hold on
+plot((1:t_end)*ts, PoI1, 'LineWidth', 2)
+xlabel('Time (s)', 'Interpreter','latex')
+ylabel('$\rm{PoI}^1$', 'Interpreter','latex')
+ylim([-0.5, 10])
+
+% P2's PoI
+PoI2 = PoIs(2, 1:t_end);
+f = figure('Color','white');
+f.Position = fposition;
+set(gca,'FontSize',fs)
+hold on
+plot((1:t_end)*ts, PoI2, 'LineWidth', 2)
+xlabel('Time (s)', 'Interpreter','latex')
+ylabel('$\rm{PoI}^2$', 'Interpreter','latex')
+ylim([-0.5, 10])
 
 
 %% Plot Hs color map
