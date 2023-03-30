@@ -354,8 +354,8 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P2_bias=0. * np.ones((2,)),
     T=TIME_RES,
     damping_opn=0.1,
-    damping_att=[0.7, 0.7],  # [0.7, 0.7]
-    rho=[0.8, 0.8],  # [0.7, 0.7]
+    damping_att=[0.5, 0.5],  # [0.7, 0.7]
+    rho=[0.7, 0.7],  # [0.7, 0.7]
 )
 
 # RHC planning and simulation.
@@ -369,7 +369,7 @@ planner = RHCPlanner(
 )
 planner.plan(jnt_x0, z0)
 
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_xs.npy'), planner.xs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_zs.npy'), planner.zs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_Hs.npy'), planner.Hs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_PoI.npy'), planner.PoI)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_xs.npy'), planner.xs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_zs.npy'), planner.zs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_Hs.npy'), planner.Hs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L0_t1_PoI.npy'), planner.PoI)
