@@ -328,13 +328,13 @@ subgames = [[solver11, solver12], [solver21, solver22]]
 ################################################################################
 # Initializes states.
 car_R_px0 = 0.0
-car_R_py0 = 4.5
+car_R_py0 = 5.0
 car_R_theta0 = 0.0
 car_R_v0 = 3.0
 car_R_x0 = np.array([car_R_px0, car_R_py0, car_R_theta0, car_R_v0])
 
 car_H_px0 = 5.0
-car_H_py0 = 2.5
+car_H_py0 = 2.0
 car_H_theta0 = 0.0
 car_H_v0 = 3.0
 car_H_x0 = np.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])

@@ -340,7 +340,7 @@ car_H_v0 = 3.0
 car_H_x0 = np.array([car_H_px0, car_H_py0, car_H_theta0, car_H_v0])
 
 jnt_x0 = np.concatenate([car_R_x0, car_H_x0], axis=0)
-z0 = np.array(([1e-3, 1e-3, 1e-3, 1e-3, 0., 0.]))
+z0 = np.array(([1e-2, 1e-2, 1e-2, 1e-2, 0., 0.]))
 
 # Creates the GiNOD.
 GiNOD = NonlinearOpinionDynamicsTwoPlayer(
@@ -354,7 +354,7 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P2_bias=0. * np.ones((2,)),
     T=TIME_RES,
     damping_opn=0.1,
-    damping_att=[0.5, 0.7],  # [0.5, 0.7]
+    damping_att=[0.5, 0.5],  # [0.5, 0.7]
     rho=[0.8, 0.8],  # [0.8, 0.8]
 )
 

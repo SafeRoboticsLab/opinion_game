@@ -5,11 +5,11 @@ clear; close all; clc
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_', game_param, '_zs_replan.npy')));
 
-xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
-zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
 
-% xs = double(readNPY(strcat('two_car/two_car_L0_t2_xs.npy')));
-% zs = double(readNPY(strcat('two_car/two_car_L0_t2_zs.npy')));
+xs = double(readNPY(strcat('two_car/two_car_L0_t2_xs.npy')));
+zs = double(readNPY(strcat('two_car/two_car_L0_t2_zs.npy')));
 
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_L1L0_zs.npy')));
@@ -21,11 +21,11 @@ XH_in = xs(5:8, :);
 %% Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 5;
+option.t_skip     = 10;  % 18
 option.N_interp   = 1;
 option.t_start    = 1;
 option.t_end      = [];
-option.pause      = 0.1;
+option.pause      = 0.0;
 option.UI         = false;
 option.fps = Inf;
 
@@ -308,7 +308,7 @@ return
 %% Plot PoI
 PoIs = double(readNPY(strcat('two_car/two_car_L0_t1_PoI.npy')));
 
-t_end = 120;
+t_end = 130;
 
 % P1's PoI
 PoI1 = PoIs(1, 1:t_end);
