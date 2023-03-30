@@ -5,6 +5,7 @@ Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 """
 
+import time
 import numpy as np
 
 from .qmdp import QMDP
@@ -121,12 +122,16 @@ class RHCPlanner(object):
 
       elif self._method == 'QMDPL1L0':
         # Player 1
+        # tt = time.time()
         u1 = self._QMDP_P1.plan_level_1(
             xs[:, k], z1_k, z2_k, att1_k, att2_k, self._subgames, subgame_k
         )
+        # print("L1 sol. time: ", time.time() - tt)
 
         # Player 2
+        # tt = time.time()
         u2 = self._QMDP_P2.plan_level_0(xs[:, k], z2_k, z1_k, self._subgames)
+        # print("L0 sol. time: ", time.time() - tt)
 
       else:
         raise NotImplementedError
