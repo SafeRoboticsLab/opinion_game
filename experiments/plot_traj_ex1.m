@@ -5,11 +5,12 @@ clear; close all; clc
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_', game_param, '_zs_replan.npy')));
 
-% xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
-% zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
+xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
+zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
+PoIs = double(readNPY(strcat('two_car/two_car_L0_t1_PoI.npy')));
 
-xs = double(readNPY(strcat('two_car/two_car_L0_t2_xs.npy')));
-zs = double(readNPY(strcat('two_car/two_car_L0_t2_zs.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L0_t2_xs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_L0_t2_zs.npy')));
 
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_L1L0_zs.npy')));
@@ -21,10 +22,10 @@ XH_in = xs(5:8, :);
 %% Sets parameters.
 option.keep_traj  = true;
 option.is_fading  = false;
-option.t_skip     = 10;  % 18
+option.t_skip     = 15;
 option.N_interp   = 1;
 option.t_start    = 1;
-option.t_end      = [];
+option.t_end      = 31;
 option.pause      = 0.0;
 option.UI         = false;
 option.fps = Inf;
@@ -302,13 +303,9 @@ xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$\lambda^2$', 'Interpreter','latex')
 ylim([-0.5, 6])
 
-return
-
 
 %% Plot PoI
-PoIs = double(readNPY(strcat('two_car/two_car_L0_t1_PoI.npy')));
-
-t_end = 130;
+t_end = length(PoIs);
 
 % P1's PoI
 PoI1 = PoIs(1, 1:t_end);
@@ -319,7 +316,7 @@ hold on
 plot((1:t_end)*ts, PoI1, 'LineWidth', 2)
 xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$\rm{PoI}^1$', 'Interpreter','latex')
-ylim([-0.5, 10])
+ylim([0, 5.5])
 
 % P2's PoI
 PoI2 = PoIs(2, 1:t_end);
@@ -330,8 +327,10 @@ hold on
 plot((1:t_end)*ts, PoI2, 'LineWidth', 2)
 xlabel('Time (s)', 'Interpreter','latex')
 ylabel('$\rm{PoI}^2$', 'Interpreter','latex')
-ylim([-0.5, 10])
+ylim([0, 5.5])
 
+
+return
 
 %% Plot Hs color map
 Hs = double(readNPY(strcat('two_car/two_car_L1_Hs.npy')));
