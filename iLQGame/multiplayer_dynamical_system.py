@@ -4,9 +4,6 @@ Multiplayer dynamical systems.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
-
-TODO:
-  - Rewrite comments
 """
 import numpy as np
 from typing import Tuple
@@ -27,12 +24,10 @@ class MultiPlayerDynamicalSystem(object):
     """
     Initialize with number of state/control dimensions.
 
-    :param x_dim: number of state dimensions
-    :type x_dim: uint
-    :param u_dims: liset of number of control dimensions for each player
-    :type u_dims: [uint]
-    :param T: time interval
-    :type T: float
+    Args:
+        x_dim (int): number of state dimensions
+        u_dims ([int]): liset of number of control dimensions for each player
+        T (float): time interval
     """
     self._x_dim = x_dim
     self._u_dims = u_dims
@@ -107,10 +102,10 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
 
     Initialize with a list of dynamical systems.
 
-    :param subsystems: list of component (single-player) dynamical systems
-    :type subsystems: [DynamicalSystem]
-    :param T: time interval
-    :type T: float
+    Args:
+        subsystems ([DynamicalSystem]): list of component (single-player)
+          dynamical systems
+        T (float): time interval
     """
     self._subsystems = subsystems
     self._x_dims = [sys._x_dim for sys in subsystems]

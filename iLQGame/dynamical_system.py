@@ -4,10 +4,6 @@ Dynamical systems.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
-
-TODO:
-  - Rewrite comments
-  - Remove opinion dynamics
 """
 
 from typing import Tuple
@@ -28,12 +24,10 @@ class DynamicalSystem(object):
     """
     Initialize with number of state/control dimensions.
 
-    :param x_dim: number of state dimensions
-    :type x_dim: uint
-    :param u_dim: number of control dimensions
-    :type u_dim: uint
-    :param T: time interval
-    :type T: float
+    Args:
+        x_dim (int): number of state dimensions
+        u_dim (int): number of control dimensions
+        T (float): time interval
     """
     self._x_dim = x_dim
     self._u_dim = u_dim

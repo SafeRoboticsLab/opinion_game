@@ -4,9 +4,6 @@ Geometry objects for planning.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
-
-TODO:
-  - Rewrite comments
 """
 
 import numpy as np
@@ -84,8 +81,8 @@ class LineSegment(object):
                                     |
                                     *
 
-    :param point: query point
-    :type point: Point
+    Args:
+        point (Point): query point
     """
     # Vector from p1 to query.
     relative = point - self.p1
@@ -119,8 +116,8 @@ class Polyline(object):
     """
     Initialize from a list of points. Keeps only a reference to input list.
 
-    :param points: list of Points
-    :type points: [Point]
+    Args:
+        points ([Point]): list of Points
     """
     self.points = points
 
@@ -135,8 +132,8 @@ class Polyline(object):
                                     |
                                     *
 
-    :param point: query point
-    :type point: Point
+    Args:
+        point (Point): query point
     """
     # NOTE: for now, we'll just implement this with a naive linear search.
     # In future, if we want to optimize at all we can pass in a guess of

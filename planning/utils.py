@@ -18,7 +18,7 @@ class TwoCar8D(object):
   """
   Two car model for casadi.
 
-  TODO: Move to dynamica_system.py
+  TODO: Move to dynamical_system.py
   """
 
   def __init__(self, l=3.0, T=0.1):

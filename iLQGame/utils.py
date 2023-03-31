@@ -4,21 +4,10 @@ Util functions for iLQGame.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
-
-TODO:
-  - Rewrite comments
 """
 
-from distutils.log import error
-from multiprocessing.sharedctypes import Value
-import dill
 import yaml
-import scipy.io
 import numpy as np
-import matplotlib.pyplot as plt
-
-from jaxlib.xla_extension import DeviceArray
-import jax.numpy as jnp
 
 
 class Struct:
@@ -34,8 +23,10 @@ class Struct:
 def load_config(file_path):
   """
   Loads the config file.
+
   Args:
       file_path (string): path to the parameter file.
+
   Returns:
       Struct: parameters.
   """

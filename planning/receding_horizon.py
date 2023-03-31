@@ -35,8 +35,12 @@ class RHCPlanner(object):
 
   def plan(self, x0, z0):
     """
-    RHC planning.
+    Receding horizon planning.
     Assumes two player.
+
+    Args:
+        x0 (np.ndarray): initial state
+        z0 (np.ndarray): initial opinion
     """
 
     # Initialization.

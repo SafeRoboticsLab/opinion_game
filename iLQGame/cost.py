@@ -4,13 +4,7 @@ Game costs.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
-
-TODO:
-  - Remove unsed classes.
-  - Rewrite comments
 """
-
-import matplotlib.pyplot as plt
 
 from functools import partial
 from jax import jit, lax, jacfwd, hessian
@@ -179,18 +173,11 @@ class ObstacleCost(Cost):
       x_dim=None, ui_dim=None
   ):
     """
-    Obstacle cost, derived from Cost base class. Implements a cost function that
-    depends only on state and penalizes min(0, dist - max_distance)^2.
+    Obstacle cost, derived from Cost base class. Implements a cost function
+    that depends only on state and penalizes min(0, dist - max_distance)^2.
 
     Initialize with dimension to add cost to and a max distance beyond
     which we impose no additional cost.
-
-    :param position_indices: indices of input corresponding to (x, y)
-    :type position_indices: (uint, uint)
-    :param point: center of the obstacle from which to compute distance
-    :type point: Point
-    :param max_distance: maximum value of distance to penalize
-    :type threshold: float
     """
     self._x_index, self._y_index = position_indices
     self._point = point
@@ -618,13 +605,11 @@ class SemiquadraticCost(Cost):
     Initialize with dimension to add cost to and threshold above which
     to impose quadratic cost.
 
-    :param dimension: dimension to add cost
-    :type dimension: uint
-    :param threshold: value above which to impose quadratic cost
-    :type threshold: float
-    :param oriented_right: Boolean flag determining which side of threshold
-      to penalize
-    :type oriented_right: bool
+    Args:
+        dimension (int): dimension to add cost
+        threshold (float): value above which to impose quadratic cost
+        oriented_right (bool): Boolean flag determining which side of threshold
+          to penalize
     """
     self._dimension = dimension
     self._threshold = threshold
@@ -730,12 +715,10 @@ class SemiquadraticPolylineCost(Cost):
 
     Initialize with a polyline, a threshold in distance from the polyline.
 
-    :param polyline: piecewise linear path which defines signed distances
-    :type polyline: Polyline
-    :param distance_threshold: value above which to penalize
-    :type distance_threshold: float
-    :param position_indices: indices of input corresponding to (x, y)
-    :type position_indices: (uint, uint)
+    Args:
+        polyline (Polyline): piecewise linear path defining signed distances
+        distance_threshold (float): value above which to penalize
+        position_indices (int, int): indices of input corresponding to (x, y)
     """
     self._polyline = polyline
     self._distance_threshold = distance_threshold

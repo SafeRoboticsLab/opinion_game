@@ -17,10 +17,10 @@ def softmax(z: DeviceArray, idx: int) -> DeviceArray:
   Softmax operator.
 
   Args:
-      z (DeviceArray): vector.
-      idx (int): index.
+      z (DeviceArray): vector
+      idx (int): index
 
   Returns:
-      DeviceArray: output.
+      DeviceArray: output
   """
   return jnp.exp(z[idx]) / jnp.sum(jnp.exp(z))

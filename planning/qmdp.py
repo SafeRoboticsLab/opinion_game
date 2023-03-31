@@ -80,6 +80,15 @@ class QMDP(object):
     """
     Level-0 QMDP planning.
     Assumes two player.
+
+    Args:
+        x (np.ndarray): current state
+        z_ego (np.ndarray): ego's opinion
+        z_opp (np.ndarray): opponent's opinion
+        subgames (list): subgames
+
+    Returns:
+        np.ndarray: ego's control
     """
     nz1 = self._GiNOD._num_opn_P1
     nz2 = self._GiNOD._num_opn_P2
@@ -208,6 +217,18 @@ class QMDP(object):
     """
     Level-1 QMDP planning.
     Assumes two player two option.
+
+    Args:
+        x (np.ndarray): current state
+        z_ego (np.ndarray): ego's opinion
+        z_opp (np.ndarray): opponent's opinion
+        att_ego (np.ndarray): ego's attention
+        att_opp (np.ndarray): opponent's attention
+        subgames (list): subgames
+        subgame_k (tuple): optimized subgame parameters
+
+    Returns:
+        np.ndarray: ego's control
     """
 
     def softmax_cas(z, idx):

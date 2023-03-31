@@ -4,9 +4,6 @@ Cost container.
 Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil)
-
-TODO:
-  - Rewrite comments
 """
 
 from functools import partial
@@ -23,17 +20,15 @@ class PlayerCost(object):
 
   def add_cost(self, cost, arg, weight=1.0):
     """
-        Add a new cost to the game, and specify its argument to be either
-        "x" or an integer indicating which player's control it is, e.g. 0
-        corresponds to u0. Also assign a weight.
+    Add a new cost to the game, and specify its argument to be either
+    "x" or an integer indicating which player's control it is, e.g. 0
+    corresponds to u0. Also assign a weight.
 
-        :param cost: cost function to add
-        :type cost: Cost
-        :param arg: argument of cost, either "x" or a player index
-        :type arg: string or uint
-        :param weight: multiplicative weight for this cost
-        :type weight: float
-        """
+    Args:
+        cost (Cost): cost function to add
+        arg (string or int): argument of cost, either "x" or a player index
+        weight (float, optional): multiplicative weight for this cost
+    """
     self._costs.append(cost)
     self._args.append(arg)
     self._weights.append(weight)

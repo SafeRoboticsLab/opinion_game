@@ -1,5 +1,5 @@
 """
-Opinion Game: Two car toll station example.
+Subgame tests: Two car toll station example.
 """
 
 import os

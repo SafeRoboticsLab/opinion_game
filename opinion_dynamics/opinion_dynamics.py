@@ -83,10 +83,7 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def cont_time_dyn(
-      self,
-      x: DeviceArray,
-      ctrl=None,
-      subgame: Tuple = (),
+      self, x: DeviceArray, ctrl=None, subgame: Tuple = ()
   ) -> DeviceArray:
     """
     Computes the time derivative of state for a particular state/control.
@@ -290,14 +287,8 @@ class NonlinearOpinionDynamicsTwoPlayer(DynamicalSystem):
 
   @partial(jit, static_argnums=(0,))
   def disc_dyn_jitted(
-      self,
-      x_ph: DeviceArray,
-      z1: DeviceArray,
-      z2: DeviceArray,
-      att1: DeviceArray,
-      att2: DeviceArray,
-      ctrl=None,
-      subgame: Tuple = (),
+      self, x_ph: DeviceArray, z1: DeviceArray, z2: DeviceArray,
+      att1: DeviceArray, att2: DeviceArray, ctrl=None, subgame: Tuple = ()
   ) -> DeviceArray:
     """
     Computes the next opinion state.

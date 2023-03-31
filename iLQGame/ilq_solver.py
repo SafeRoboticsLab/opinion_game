@@ -5,8 +5,7 @@ Please contact the author(s) of this library if you have any questions.
 Author: Haimin Hu (haiminh@princeton.edu)
 Reference: ilqgames/python (David Fridovich-Keil)
 
-TODO:
-  - Rewrite comments
+TODO: Jaxify the backward pass (may need to enforce identical control dims).
 """
 
 import time
