@@ -354,8 +354,8 @@ GiNOD = NonlinearOpinionDynamicsTwoPlayer(
     z_P2_bias=0. * np.ones((2,)),
     T=TIME_RES,
     damping_opn=0.1,
-    damping_att=[0.5, 0.5],  # [0.5, 0.5]
-    rho=[0.8, 0.8],  # [0.8, 0.8]
+    damping_att=[0.5, 0.5],
+    rho=[0.8, 0.8],
 )
 
 # RHC planning and simulation.
