@@ -14,6 +14,7 @@
     <li><a href="#example">Example</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#paper">Paper</a></li>
   </ol>
 </details>
 
@@ -80,6 +81,21 @@ Distributed under the BSD 3-Clause License. See `LICENSE` for more information.
 
 Haimin Hu - [@HaiminHu](https://twitter.com/HaiminHu) - haiminh@princeton.edu
 
+
+<!-- PAPER -->
+## Paper
+
+If you find this repo helpful, please consider citing our paper.
+```
+@misc{hu2023emergent,
+      title={Emergent Coordination through Game-Induced Nonlinear Opinion Dynamics}, 
+      author={Haimin Hu and Kensuke Nakamura and Kai-Chieh Hsu and Naomi Ehrich Leonard and Jaime Fernández Fisac},
+      year={2023},
+      eprint={2304.02687},
+      archivePrefix={arXiv},
+      primaryClass={eess.SY}
+}
+```
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
