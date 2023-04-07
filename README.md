@@ -58,7 +58,7 @@ The following scripts reproduce the results in our paper.
     python3 test_L1L0_two_car.py
 ```
 
-
+<!--
 <br />
 <p align="center">
   <a href="https://github.com/SafeRoboticsLab/opinion_game_dev">
@@ -68,6 +68,7 @@ The following scripts reproduce the results in our paper.
     Simulation results using L0-QMDP with homogeneous cost weights.
   </p>
 </p>
+-->
 
 
 <!-- LICENSE -->
