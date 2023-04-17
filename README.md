@@ -86,7 +86,7 @@ Haimin Hu - [@HaiminHu](https://twitter.com/HaiminHu) - haiminh@princeton.edu
 <!-- PAPER -->
 ## Paper
 
-If you find this repo helpful, please consider citing our paper.
+If you find this repo helpful, please consider citing [our paper](https://arxiv.org/abs/2304.02687).
 ```
 @misc{hu2023emergent,
       title={Emergent Coordination through Game-Induced Nonlinear Opinion Dynamics}, 
