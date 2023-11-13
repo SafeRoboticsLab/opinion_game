@@ -88,13 +88,11 @@ Haimin Hu - [@HaiminHu](https://twitter.com/HaiminHu) - haiminh@princeton.edu
 
 If you find this repo helpful, please consider citing [our paper](https://arxiv.org/abs/2304.02687).
 ```
-@misc{hu2023emergent,
+@inproceedings{hu2023emergent,
       title={Emergent Coordination through Game-Induced Nonlinear Opinion Dynamics}, 
       author={Haimin Hu and Kensuke Nakamura and Kai-Chieh Hsu and Naomi Ehrich Leonard and Jaime Fernández Fisac},
+      booktitle={2023 62nd IEEE Conference on Decision and Control (CDC), to appear},
       year={2023},
-      eprint={2304.02687},
-      archivePrefix={arXiv},
-      primaryClass={eess.SY}
 }
 ```
 
