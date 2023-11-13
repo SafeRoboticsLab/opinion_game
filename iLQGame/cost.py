@@ -27,9 +27,7 @@ class Cost(object):
     self._ui_dim = ui_dim
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray, k: int = 0) -> DeviceArray:
     """
     Abstract method.
     Evaluates this cost function on the given input state and/or control.
@@ -68,9 +66,7 @@ class Cost(object):
     return costs
 
   @partial(jit, static_argnums=(0,))
-  def get_grad(
-      self, x: DeviceArray, ui: DeviceArray, k: int = 0
-  ) -> DeviceArray:
+  def get_grad(self, x: DeviceArray, ui: DeviceArray, k: int = 0) -> DeviceArray:
     """
     Calculates the gradient w.r.t. state x, i.e. dc/dx, at (x, ui, k), and
     the gradient w.r.t. control ui, i.e. dc/dui, at (x, ui, k).
@@ -111,15 +107,11 @@ class Cost(object):
 
     lxs = jnp.zeros((self._x_dim, self._horizon))
     lus = jnp.zeros((self._ui_dim, self._horizon))
-    lxs, lus = lax.fori_loop(
-        0, self._horizon, get_traj_grad_looper, (lxs, lus)
-    )
+    lxs, lus = lax.fori_loop(0, self._horizon, get_traj_grad_looper, (lxs, lus))
     return lxs, lus
 
   @partial(jit, static_argnums=(0,))
-  def get_hess(
-      self, x: DeviceArray, ui: DeviceArray, k: int = 0
-  ) -> DeviceArray:
+  def get_hess(self, x: DeviceArray, ui: DeviceArray, k: int = 0) -> DeviceArray:
     """
     Calculates the Hessians w.r.t. state x and control ui at (x, ui, k).
 
@@ -160,17 +152,14 @@ class Cost(object):
 
     Hxxs = jnp.zeros((self._x_dim, self._x_dim, self._horizon))
     Huus = jnp.zeros((self._ui_dim, self._ui_dim, self._horizon))
-    Hxxs, Huus = lax.fori_loop(
-        0, self._horizon, get_traj_hess_looper, (Hxxs, Huus)
-    )
+    Hxxs, Huus = lax.fori_loop(0, self._horizon, get_traj_hess_looper, (Hxxs, Huus))
     return Hxxs, Huus
 
 
 class ObstacleCost(Cost):
 
   def __init__(
-      self, position_indices, point, max_distance, name="", horizon=None,
-      x_dim=None, ui_dim=None
+      self, position_indices, point, max_distance, name="", horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Obstacle cost, derived from Cost base class. Implements a cost function
@@ -185,9 +174,7 @@ class ObstacleCost(Cost):
     super(ObstacleCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -210,8 +197,7 @@ class ObstacleCost(Cost):
 class ProductStateProximityCostTwoPlayer(Cost):
 
   def __init__(
-      self, position_indices, max_distance, name="", horizon=None, x_dim=None,
-      ui_dim=None
+      self, position_indices, max_distance, name="", horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Proximity cost for state spaces that are Cartesian products of individual
@@ -225,13 +211,10 @@ class ProductStateProximityCostTwoPlayer(Cost):
     self._max_distance = max_distance
     self._num_players = len(position_indices)
     self._max_exp_bound = 1e5
-    super(ProductStateProximityCostTwoPlayer,
-          self).__init__(name, horizon, x_dim, ui_dim)
+    super(ProductStateProximityCostTwoPlayer, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -255,8 +238,7 @@ class ProductStateProximityCostTwoPlayer(Cost):
     rel_dist = jsqrt((x[x1_idx] - x[x2_idx])**2 + (x[y1_idx] - x[y2_idx])**2)
     # total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
     total_cost += jnp.minimum(
-        jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2),
-        self._max_exp_bound
+        jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2), self._max_exp_bound
     )
 
     # Player 2.
@@ -264,8 +246,7 @@ class ProductStateProximityCostTwoPlayer(Cost):
     rel_dist = jsqrt((x[x2_idx] - x[x1_idx])**2 + (x[y2_idx] - x[y1_idx])**2)
     # total_cost += jnp.minimum(rel_dist - self._max_distance, 0.)**2
     total_cost += jnp.minimum(
-        jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2),
-        self._max_exp_bound
+        jnp.exp(jnp.minimum(rel_dist - self._max_distance, 0.)**2), self._max_exp_bound
     )
 
     return total_cost
@@ -274,8 +255,7 @@ class ProductStateProximityCostTwoPlayer(Cost):
 class ProductStateProximityCostThreePlayer(Cost):
 
   def __init__(
-      self, position_indices, max_distance, name="", horizon=None, x_dim=None,
-      ui_dim=None
+      self, position_indices, max_distance, name="", horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Proximity cost for state spaces that are Cartesian products of individual
@@ -291,13 +271,10 @@ class ProductStateProximityCostThreePlayer(Cost):
     self._position_indices = position_indices
     self._max_distance = max_distance
     self._num_players = len(position_indices)
-    super(ProductStateProximityCostThreePlayer,
-          self).__init__(name, horizon, x_dim, ui_dim)
+    super(ProductStateProximityCostThreePlayer, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -347,8 +324,8 @@ class ProductStateProximityCostThreePlayer(Cost):
 class ProximityCost(Cost):
 
   def __init__(
-      self, position_indices, point_px, point_py, max_distance, name="",
-      horizon=None, x_dim=None, ui_dim=None
+      self, position_indices, point_px, point_py, max_distance, name="", horizon=None, x_dim=None,
+      ui_dim=None
   ):
     """
     Proximity cost, derived from Cost base class. Implements a cost function
@@ -361,9 +338,7 @@ class ProximityCost(Cost):
     super(ProximityCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -384,10 +359,7 @@ class ProximityCost(Cost):
 
 class QuadraticCost(Cost):
 
-  def __init__(
-      self, dimension, origin, is_x=False, name="", horizon=None, x_dim=None,
-      ui_dim=None
-  ):
+  def __init__(self, dimension, origin, is_x=False, name="", horizon=None, x_dim=None, ui_dim=None):
     """
     Quadratic cost, derived from Cost base class.
 
@@ -405,9 +377,7 @@ class QuadraticCost(Cost):
     super(QuadraticCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -427,10 +397,7 @@ class QuadraticCost(Cost):
 
 class QuadraticPolylineCost(Cost):
 
-  def __init__(
-      self, polyline, position_indices, name="", horizon=None, x_dim=None,
-      ui_dim=None
-  ):
+  def __init__(self, polyline, position_indices, name="", horizon=None, x_dim=None, ui_dim=None):
     """
     Quadratic cost that penalizes distance from a polyline.
 
@@ -446,9 +413,7 @@ class QuadraticPolylineCost(Cost):
     super(QuadraticPolylineCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -468,8 +433,7 @@ class QuadraticPolylineCost(Cost):
 class ReferenceDeviationCost(Cost):
 
   def __init__(
-      self, reference, dimension=None, is_x=False, name="", horizon=None,
-      x_dim=None, ui_dim=None
+      self, reference, dimension=None, is_x=False, name="", horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Reference trajectory following cost. Penalizes sum of squared deviations
@@ -481,9 +445,7 @@ class ReferenceDeviationCost(Cost):
     super(ReferenceDeviationCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -504,8 +466,7 @@ class ReferenceDeviationCost(Cost):
 class ReferenceDeviationCostPxDependent(Cost):
 
   def __init__(
-      self, reference, px_lb, px_dim, dimension=None, name="", horizon=None,
-      x_dim=None, ui_dim=None
+      self, reference, px_lb, px_dim, dimension=None, name="", horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Reference trajectory following cost, dependent on px.
@@ -514,13 +475,10 @@ class ReferenceDeviationCostPxDependent(Cost):
     self._dimension = dimension
     self._px_lb = px_lb
     self._px_dim = px_dim
-    super(ReferenceDeviationCostPxDependent,
-          self).__init__(name, horizon, x_dim, ui_dim)
+    super(ReferenceDeviationCostPxDependent, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -545,9 +503,8 @@ class ReferenceDeviationCostPxDependent(Cost):
 class OpnWeightedReferenceDeviationCost(Cost):
 
   def __init__(
-      self, reference, dimension=None, is_x=False, name="", horizon=None,
-      x_dim=None, ui_dim=None, z_idx: int = None, opn_idx: int = None,
-      player_id: int = None
+      self, reference, dimension=None, is_x=False, name="", horizon=None, x_dim=None, ui_dim=None,
+      z_idx: int = None, opn_idx: int = None, player_id: int = None
   ):
     """
     Opinion-weighted reference trajectory following cost.
@@ -560,13 +517,10 @@ class OpnWeightedReferenceDeviationCost(Cost):
     self._z_idx = z_idx
     self._opn_idx = opn_idx
     self._player_id = player_id
-    super(OpnWeightedReferenceDeviationCost,
-          self).__init__(name, horizon, x_dim, ui_dim)
+    super(OpnWeightedReferenceDeviationCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -594,8 +548,8 @@ class OpnWeightedReferenceDeviationCost(Cost):
 class SemiquadraticCost(Cost):
 
   def __init__(
-      self, dimension, threshold, oriented_right, is_x=False, name="",
-      horizon=None, x_dim=None, ui_dim=None
+      self, dimension, threshold, oriented_right, is_x=False, name="", horizon=None, x_dim=None,
+      ui_dim=None
   ):
     """
     Semiquadratic cost, derived from Cost base class. Implements a
@@ -618,9 +572,7 @@ class SemiquadraticCost(Cost):
     super(SemiquadraticCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -645,20 +597,15 @@ class SemiquadraticCost(Cost):
       return 0.
 
     if self._oriented_right:
-      return lax.cond(
-          z[self._dimension] > self._threshold, true_fn, false_fn, z
-      )
+      return lax.cond(z[self._dimension] > self._threshold, true_fn, false_fn, z)
     else:
-      return lax.cond(
-          z[self._dimension] < self._threshold, true_fn, false_fn, z
-      )
+      return lax.cond(z[self._dimension] < self._threshold, true_fn, false_fn, z)
 
 
 class MaxVelCostPxDependent(Cost):
 
   def __init__(
-      self, v_index, px_index, max_v, px_lb, px_ub, name="", horizon=None,
-      x_dim=None, ui_dim=None
+      self, v_index, px_index, max_v, px_lb, px_ub, name="", horizon=None, x_dim=None, ui_dim=None
   ):
     """
     Penalize max velocity depending on the environment.
@@ -672,9 +619,7 @@ class MaxVelCostPxDependent(Cost):
     super(MaxVelCostPxDependent, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -694,9 +639,7 @@ class MaxVelCostPxDependent(Cost):
 
     def true_fn(x):
       # return (x[self._v_index] - self._max_v)**2
-      return jnp.minimum(
-          jnp.exp((x[self._v_index] - self._max_v)**2), self._max_exp_bound
-      )
+      return jnp.minimum(jnp.exp((x[self._v_index] - self._max_v)**2), self._max_exp_bound)
 
     def false_fn(x):
       return 0.
@@ -707,8 +650,8 @@ class MaxVelCostPxDependent(Cost):
 class SemiquadraticPolylineCost(Cost):
 
   def __init__(
-      self, polyline, distance_threshold, position_indices, name="",
-      horizon=None, x_dim=None, ui_dim=None
+      self, polyline, distance_threshold, position_indices, name="", horizon=None, x_dim=None,
+      ui_dim=None
   ):
     """
     Semiquadratic cost that takes effect a fixed distance away from a Polyline.
@@ -723,13 +666,10 @@ class SemiquadraticPolylineCost(Cost):
     self._polyline = polyline
     self._distance_threshold = distance_threshold
     self._x_index, self._y_index = position_indices
-    super(SemiquadraticPolylineCost,
-          self).__init__(name, horizon, x_dim, ui_dim)
+    super(SemiquadraticPolylineCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 
@@ -753,16 +693,15 @@ class SemiquadraticPolylineCost(Cost):
     abs_signed_distance = jnp.abs(signed_distance)
 
     return lax.cond(
-        abs_signed_distance > self._distance_threshold, true_fn, false_fn,
-        abs_signed_distance
+        abs_signed_distance > self._distance_threshold, true_fn, false_fn, abs_signed_distance
     )
 
 
 class BoxInputConstraintCost(Cost):
 
   def __init__(
-      self, u_index, control_min, control_max, q1=1., q2=5., name="",
-      horizon=None, x_dim=None, ui_dim=None
+      self, u_index, control_min, control_max, q1=1., q2=5., name="", horizon=None, x_dim=None,
+      ui_dim=None
   ):
     """
     Box input constraint cost.
@@ -775,9 +714,7 @@ class BoxInputConstraintCost(Cost):
     super(BoxInputConstraintCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray = None, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
     """
     Evaluates this cost function on the given input state and/or control.
 

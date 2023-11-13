@@ -5,15 +5,18 @@ clear; close all; clc
 % xs = double(readNPY(strcat('two_car/two_car_', game_param, '_xs_replan.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_', game_param, '_zs_replan.npy')));
 
-xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
-zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
-PoIs = double(readNPY(strcat('two_car/two_car_L0_t1_PoI.npy')));
+% xs = double(readNPY(strcat('two_car/two_car_L0_t1_xs.npy')));
+% zs = double(readNPY(strcat('two_car/two_car_L0_t1_zs.npy')));
+% PoIs = double(readNPY(strcat('two_car/two_car_L0_t1_PoI.npy')));
 
 % xs = double(readNPY(strcat('two_car/two_car_L0_t2_xs.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_L0_t2_zs.npy')));
 
 % xs = double(readNPY(strcat('two_car/two_car_L1L0_xs.npy')));
 % zs = double(readNPY(strcat('two_car/two_car_L1L0_zs.npy')));
+
+xs = double(readNPY(strcat('two_car/two_car_L1_xs.npy')));
+zs = double(readNPY(strcat('two_car/two_car_L1_zs.npy')));
 
 XR_in = xs(1:4, :);
 XH_in = xs(5:8, :);

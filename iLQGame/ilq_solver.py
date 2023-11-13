@@ -23,8 +23,8 @@ from .cost import *
 class ILQSolver(object):
 
   def __init__(
-      self, dynamics, player_costs, Ps, alphas, alpha_scaling=0.05,
-      max_iter=100, u_constraints=None, verbose=False, name=None
+      self, dynamics, player_costs, Ps, alphas, alpha_scaling=0.05, max_iter=100,
+      u_constraints=None, verbose=False, name=None
   ):
     """
     Initializer.
@@ -57,15 +57,9 @@ class ILQSolver(object):
       self._alphas = alphas_warmstart
     self._last_operating_point = None
     _current_x = jnp.zeros((self._dynamics._x_dim, self._horizon))
-    _current_u = [
-        jnp.zeros((ui_dim, self._horizon)) for ui_dim in self._dynamics._u_dims
-    ]
-    self._current_operating_point = (
-        _current_x, _current_u, self._Ps, self._alphas
-    )
-    self._best_operating_point = (
-        _current_x, _current_u, self._Ps, self._alphas
-    )
+    _current_u = [jnp.zeros((ui_dim, self._horizon)) for ui_dim in self._dynamics._u_dims]
+    self._current_operating_point = (_current_x, _current_u, self._Ps, self._alphas)
+    self._best_operating_point = (_current_x, _current_u, self._Ps, self._alphas)
     self._best_social_cost = 1e10
     self._current_social_cost = 1e10
     self._last_social_cost = None
@@ -95,9 +89,7 @@ class ILQSolver(object):
       best_nom_costs = []
       for alpha_scaling in self._alpha_scaling:
         current_alphas = self._alphas
-        current_alphas = [
-            (alpha_vec * alpha_scaling) for alpha_vec in current_alphas
-        ]
+        current_alphas = [(alpha_vec * alpha_scaling) for alpha_vec in current_alphas]
         xs_alpha, us_list_alpha, costs_alpha = self._compute_operating_point(
             current_xs, current_us, current_Ps, current_alphas, x0
         )
@@ -140,8 +132,8 @@ class ILQSolver(object):
       total_costs = [jnp.sum(costis) for costis in costs]
       if self._verbose:
         print(
-            "[iLQ] Iteration", iteration, "| Total cost for all players: ",
-            total_costs, " | Iter. time: ",
+            "[iLQ] Iteration", iteration, "| Total cost for all players: ", total_costs,
+            " | Iter. time: ",
             time.time() - t_start, "\n"
         )
 
@@ -173,8 +165,7 @@ class ILQSolver(object):
 
     TOLERANCE_RATE = 1e-5
     cost_diff_rate = np.abs(
-        (self._current_social_cost - self._last_social_cost)
-        / self._last_social_cost
+        (self._current_social_cost - self._last_social_cost) / self._last_social_cost
     )
 
     if cost_diff_rate > TOLERANCE_RATE:
@@ -203,8 +194,7 @@ class ILQSolver(object):
 
   @partial(jit, static_argnums=(0,))
   def _compute_operating_point(
-      self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list,
-      x0: DeviceArray
+      self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list, x0: DeviceArray
   ) -> Tuple[DeviceArray, list]:
     """
     Computes current operating point by propagating through dynamics.
@@ -282,8 +272,7 @@ class ILQSolver(object):
     # So we cannot use fori_loop.
     for k in range(self._horizon):
       A, B = self._dynamics.linearize_discrete_jitted(
-          xs[:, k], [us_list[ii][:, k] for ii in range(self._num_players)], k,
-          args
+          xs[:, k], [us_list[ii][:, k] for ii in range(self._num_players)], k, args
       )
       As = As.at[:, :, k].set(A)
 
@@ -293,9 +282,8 @@ class ILQSolver(object):
     return As, Bs_list
 
   @partial(jit, static_argnums=(0,))
-  def _quadraticize_costs(
-      self, xs: DeviceArray, us_list: list
-  ) -> Tuple[list, list, list, list, list]:
+  def _quadraticize_costs(self, xs: DeviceArray,
+                          us_list: list) -> Tuple[list, list, list, list, list]:
     """
     Quadraticizes costs at the current operating point.
 
@@ -314,8 +302,9 @@ class ILQSolver(object):
     Hxxs = [[] for _ in range(self._num_players)]
     Huus = [[] for _ in range(self._num_players)]
     for ii in range(self._num_players):
-      costs_ii, lxs_ii, _, Hxxs_ii, Huus_ii = self._player_costs[
-          ii].quadraticize_jitted(xs, us_list[ii])
+      costs_ii, lxs_ii, _, Hxxs_ii, Huus_ii = self._player_costs[ii].quadraticize_jitted(
+          xs, us_list[ii]
+      )
 
       costs[ii] = costs_ii
       lxs[ii] = lxs_ii
@@ -325,8 +314,7 @@ class ILQSolver(object):
     return costs, lxs, Hxxs, Huus
 
   def _solve_lq_game(
-      self, As: np.ndarray, Bs_list: list, Qs_list: list, ls_list: list,
-      Rs_list: list
+      self, As: np.ndarray, Bs_list: list, Qs_list: list, ls_list: list, Rs_list: list
   ) -> Tuple[list, list, list, list]:
     """
     Solves a time-varying, finite horizon LQ game (finds closed-loop Nash
@@ -407,8 +395,7 @@ class ILQSolver(object):
 
       # Updates Zs.
       for ii in range(num_players):
-        Zs[ii][:, :, k
-              ] = F.T @ Z[ii] @ F + Q[ii] + P_split[ii].T @ R[ii] @ P_split[ii]
+        Zs[ii][:, :, k] = F.T @ Z[ii] @ F + Q[ii] + P_split[ii].T @ R[ii] @ P_split[ii]
 
       # Computes alphas using previously computed zetas.
       Y = np.concatenate([B[ii].T @ zeta[ii] for ii in range(num_players)])
@@ -424,6 +411,6 @@ class ILQSolver(object):
 
       # Updates zetas to be the next step earlier in time.
       for ii in range(num_players):
-        zetas[ii][:, k] = F.T @ (zeta[ii] + Z[ii] @ beta) + l[
-            ii] + P_split[ii].T @ R[ii] @ alpha_split[ii]
+        zetas[ii][:, k] = F.T @ (zeta[ii]
+                                 + Z[ii] @ beta) + l[ii] + P_split[ii].T @ R[ii] @ alpha_split[ii]
     return Ps, alphas, Zs, zetas
