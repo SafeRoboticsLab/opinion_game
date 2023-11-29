@@ -7,11 +7,10 @@ Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
 """
 
 import numpy as np
-import torch
 
 from functools import partial
 from jax import jit, lax
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 import jax
 
@@ -50,10 +49,6 @@ class Point(object):
 
   def norm_squared(self):
     return self.x**2 + self.y**2
-
-  def norm(self):
-    if isinstance(self.x, torch.Tensor):
-      return torch.sqrt(self.norm_squared())
 
     return np.sqrt(self.norm_squared())
 
@@ -155,20 +150,20 @@ class LineSegment_jitted(object):
   Class for 2D line segments.
   """
 
-  def __init__(self, p1: DeviceArray, p2: DeviceArray):
+  def __init__(self, p1: ArrayImpl, p2: ArrayImpl):
     """
     Initialization.
 
     Args:
-        p1 (DeviceArray): px and py (2,)
-        p2 (DeviceArray): px and py (2,)
+        p1 (ArrayImpl): px and py (2,)
+        p2 (ArrayImpl): px and py (2,)
     """
     self.p1 = p1
     self.p2 = p2
     self.length = np.linalg.norm(self.p1 - self.p2)
 
   @partial(jit, static_argnums=(0,))
-  def signed_distance_to(self, point: DeviceArray) -> DeviceArray:
+  def signed_distance_to(self, point: ArrayImpl) -> ArrayImpl:
     """
     Computes signed distance to other point.
     Sign convention is positive to the right and negative to the left, e.g.:
@@ -180,10 +175,10 @@ class LineSegment_jitted(object):
                                     *
 
     Args:
-        point (DeviceArray): query point (2,)
+        point (ArrayImpl): query point (2,)
 
     Returns:
-        DeviceArray: scalar
+        ArrayImpl: scalar
     """
 
     def true_fn_outer(projection, cross, dist_p1, dist_p2):
@@ -198,8 +193,8 @@ class LineSegment_jitted(object):
         return cross
 
       return lax.cond(
-          projection > self.length, true_fn_inner, false_fn_inner, projection,
-          cross, dist_p1, dist_p2
+          projection > self.length, true_fn_inner, false_fn_inner, projection, cross, dist_p1,
+          dist_p2
       )
 
     # Vector from p1 to query.
@@ -218,16 +213,13 @@ class LineSegment_jitted(object):
     dist_p2 = cross_sign * jnp.linalg.norm(self.p2 - point)
 
     return lax.cond(
-        projection < 0., true_fn_outer, false_fn_outer, projection, cross,
-        dist_p1, dist_p2
+        projection < 0., true_fn_outer, false_fn_outer, projection, cross, dist_p1, dist_p2
     )
 
   # [VMAP DOES NOT WORK]
   @partial(jit, static_argnums=(0,))
-  def signed_distance_to_vmap(self, points: DeviceArray) -> DeviceArray:
-    _jitted_fn = jit(
-        jax.vmap(self.signed_distance_to, in_axes=(1), out_axes=(1))
-    )
+  def signed_distance_to_vmap(self, points: ArrayImpl) -> ArrayImpl:
+    _jitted_fn = jit(jax.vmap(self.signed_distance_to, in_axes=(1), out_axes=(1)))
     return _jitted_fn(points)
 
 
@@ -237,12 +229,12 @@ class Polyline_jitted(object):
   Polyline class to represent piecewise linear path in 2D.
   """
 
-  def __init__(self, points: DeviceArray = None):
+  def __init__(self, points: ArrayImpl = None):
     """
     Initialization.
 
     Args:
-        points (DeviceArray, optional): (2, N) Defaults to None.
+        points (ArrayImpl, optional): (2, N) Defaults to None.
     """
     self.points = points
     self.N_points = points.shape[1]
@@ -260,10 +252,10 @@ class Polyline_jitted(object):
                                     *
 
     Args:
-        point (DeviceArray): query point (2,)
+        point (ArrayImpl): query point (2,)
 
     Returns:
-        DeviceArray: scalar
+        ArrayImpl: scalar
     """
 
     # NOTE: for now, we'll just implement this with a naive linear search.
@@ -284,8 +276,7 @@ class Polyline_jitted(object):
           return cross
 
         return lax.cond(
-            projection > length, true_fn_inner, false_fn_inner, projection,
-            cross, dist_p1, dist_p2
+            projection > length, true_fn_inner, false_fn_inner, projection, cross, dist_p1, dist_p2
         )
 
       p1 = self.points[:, i]
@@ -309,14 +300,11 @@ class Polyline_jitted(object):
 
       abs_signed_distance = jnp.abs(
           lax.cond(
-              projection < 0., true_fn_outer, false_fn_outer, projection,
-              cross, dist_p1, dist_p2
+              projection < 0., true_fn_outer, false_fn_outer, projection, cross, dist_p1, dist_p2
           )
       )
 
-      abs_signed_distance_array = abs_signed_distance_array.at[i].set(
-          abs_signed_distance
-      )
+      abs_signed_distance_array = abs_signed_distance_array.at[i].set(abs_signed_distance)
 
       return abs_signed_distance_array
 

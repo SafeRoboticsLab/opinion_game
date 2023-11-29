@@ -14,7 +14,7 @@ from typing import Tuple
 
 from functools import partial
 from jax import jit
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 from .cost import *
@@ -194,20 +194,20 @@ class ILQSolver(object):
 
   @partial(jit, static_argnums=(0,))
   def _compute_operating_point(
-      self, current_xs: DeviceArray, current_us: list, Ps: list, alphas: list, x0: DeviceArray
-  ) -> Tuple[DeviceArray, list]:
+      self, current_xs: ArrayImpl, current_us: list, Ps: list, alphas: list, x0: ArrayImpl
+  ) -> Tuple[ArrayImpl, list]:
     """
     Computes current operating point by propagating through dynamics.
 
     Args:
-        current_xs (DeviceArray): states (nx, N)
-        current_us (list of DeviceArray): controls [(nui, N)]
-        Ps (list of DeviceArray)
-        alphas (list of DeviceArray)
+        current_xs (ArrayImpl): states (nx, N)
+        current_us (list of ArrayImpl): controls [(nui, N)]
+        Ps (list of ArrayImpl)
+        alphas (list of ArrayImpl)
 
     Returns:
-        DeviceArray: states (nx, N)
-        [DeviceArray]: list of controls for each player [(nui, N)]
+        ArrayImpl: states (nx, N)
+        [ArrayImpl]: list of controls for each player [(nui, N)]
     """
     x_dim = self._dynamics._x_dim
     u_dims = self._dynamics._u_dims
@@ -250,18 +250,17 @@ class ILQSolver(object):
     return xs, us_list, costs_list
 
   @partial(jit, static_argnums=(0,))
-  def _linearize_dynamics(self, xs: DeviceArray, us_list: list,
-                          args=()) -> Tuple[DeviceArray, list]:
+  def _linearize_dynamics(self, xs: ArrayImpl, us_list: list, args=()) -> Tuple[ArrayImpl, list]:
     """
     Linearizes dynamics at the current operating point.
 
     Args:
-        xs (DeviceArray): states (nx, N)
-        us_list (list of DeviceArray): controls [(nui, N)]
+        xs (ArrayImpl): states (nx, N)
+        us_list (list of ArrayImpl): controls [(nui, N)]
 
     Returns:
-        DeviceArray: A matrices (nx, nx, N)
-        [DeviceArray]: list of B matrices for each player [(nx, nui, N)]
+        ArrayImpl: A matrices (nx, nx, N)
+        [ArrayImpl]: list of B matrices for each player [(nx, nui, N)]
     """
     x_dim = self._dynamics._x_dim
     u_dims = self._dynamics._u_dims
@@ -282,20 +281,20 @@ class ILQSolver(object):
     return As, Bs_list
 
   @partial(jit, static_argnums=(0,))
-  def _quadraticize_costs(self, xs: DeviceArray,
+  def _quadraticize_costs(self, xs: ArrayImpl,
                           us_list: list) -> Tuple[list, list, list, list, list]:
     """
     Quadraticizes costs at the current operating point.
 
     Args:
-        xs (DeviceArray): states (nx, N)
-        us_list (list of DeviceArray): controls [(nui, N)]
+        xs (ArrayImpl): states (nx, N)
+        us_list (list of ArrayImpl): controls [(nui, N)]
 
     Returns:
-        [DeviceArray (dtype=float)]: list of costs for each player
-        [DeviceArray]: list of gradients lx = dc/dx for each player
-        [DeviceArray]: list of Hessians Hxx for each player
-        [DeviceArray]: list of Hessians Huu for each player
+        [ArrayImpl (dtype=float)]: list of costs for each player
+        [ArrayImpl]: list of gradients lx = dc/dx for each player
+        [ArrayImpl]: list of Hessians Hxx for each player
+        [ArrayImpl]: list of Hessians Huu for each player
     """
     costs = [[] for _ in range(self._num_players)]
     lxs = [[] for _ in range(self._num_players)]

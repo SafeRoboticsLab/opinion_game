@@ -1,5 +1,8 @@
 ### Python ###
 .DS_Store
+*.png
+!misc/*.png
+!experiments/two_car/car_figures/*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

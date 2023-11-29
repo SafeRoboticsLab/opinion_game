@@ -346,24 +346,24 @@ N_sim = config.N_SIM
 W_R = np.diag([5.0, 5.0])
 W_H = np.diag([5.0, 5.0])
 
-# planner = RHCPlanner(
-#     subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL1L0', config=config,
-#     W_ctrl=[W_R, W_H]
-# )
-# planner.plan(jnt_x0, z0)
-
-# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_xs.npy'), planner.xs)
-# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_zs.npy'), planner.zs)
-# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_Hs.npy'), planner.Hs)
-# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_PoI.npy'), planner.PoI)
-
 planner = RHCPlanner(
-    subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL1', config=config,
+    subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL1L0', config=config,
     W_ctrl=[W_R, W_H]
 )
 planner.plan(jnt_x0, z0)
 
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_xs.npy'), planner.xs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_zs.npy'), planner.zs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_Hs.npy'), planner.Hs)
-np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_PoI.npy'), planner.PoI)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_xs.npy'), planner.xs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_zs.npy'), planner.zs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_Hs.npy'), planner.Hs)
+np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1L0_PoI.npy'), planner.PoI)
+
+# planner = RHCPlanner(
+#     subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL1', config=config,
+#     W_ctrl=[W_R, W_H]
+# )
+# planner.plan(jnt_x0, z0)
+
+# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_xs.npy'), planner.xs)
+# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_zs.npy'), planner.zs)
+# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_Hs.npy'), planner.Hs)
+# np.save(os.path.join(LOG_DIRECTORY, FILE_NAME + '_L1_PoI.npy'), planner.PoI)

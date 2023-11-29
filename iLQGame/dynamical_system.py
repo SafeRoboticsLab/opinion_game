@@ -10,7 +10,7 @@ from typing import Tuple
 
 from functools import partial
 from jax import jit
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 
@@ -34,44 +34,39 @@ class DynamicalSystem(object):
     self._T = T
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x0: DeviceArray, u0: DeviceArray, k: int = 0, *args
-  ) -> DeviceArray:
+  def cont_time_dyn(self, x0: ArrayImpl, u0: ArrayImpl, k: int = 0, *args) -> ArrayImpl:
     """
     Abstract method.
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x0 (DeviceArray): (nx,)
-        u0 (DeviceArray): (nu,)
+        x0 (ArrayImpl): (nx,)
+        u0 (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     raise NotImplementedError("cont_time_dyn() has not been implemented.")
 
   @partial(jit, static_argnums=(0,))
-  def disc_time_dyn(
-      self, x0: DeviceArray, u0: DeviceArray, k: int = 0, args=()
-  ) -> DeviceArray:
+  def disc_time_dyn(self, x0: ArrayImpl, u0: ArrayImpl, k: int = 0, args=()) -> ArrayImpl:
     """
     Computes the one-step evolution of the system in discrete time with Euler
     integration.
 
     Args:
-        x0 (DeviceArray): (nx,)
-        u0 (DeviceArray): (nu,)
+        x0 (ArrayImpl): (nx,)
+        u0 (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     x_dot = self.cont_time_dyn(x0, u0, k, args)
     return x0 + self._T * x_dot
 
   @partial(jit, static_argnums=(0,))
-  def linearize_discrete_jitted(
-      self, x0: DeviceArray, u0: DeviceArray, k: int = 0, args=()
-  ) -> Tuple[DeviceArray, DeviceArray]:
+  def linearize_discrete_jitted(self, x0: ArrayImpl, u0: ArrayImpl, k: int = 0,
+                                args=()) -> Tuple[ArrayImpl, ArrayImpl]:
     """
     Compute the Jacobian linearization of the dynamics for a particular
     state `x0` and control `u0`. Outputs `A` and `B` matrices of a
@@ -79,12 +74,12 @@ class DynamicalSystem(object):
           ``` x(k + 1) - x0 = A (x(k) - x0) + B (u(k) - u0) ```
 
     Args:
-        x0 (DeviceArray): (nx,)
-        u0 (DeviceArray): (nu,)
+        x0 (ArrayImpl): (nx,)
+        u0 (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: the Jacobian of next state w.r.t. the current state.
-        DeviceArray: the Jacobian of next state w.r.t. the current control.
+        ArrayImpl: the Jacobian of next state w.r.t. the current state.
+        ArrayImpl: the Jacobian of next state w.r.t. the current control.
     """
     A_disc, B_disc = self.jac_f(x0, u0, k, args)
     return A_disc, B_disc
@@ -103,18 +98,16 @@ class Unicycle4D(DynamicalSystem):
     super(Unicycle4D, self).__init__(4, 2, T)
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
-  ) -> DeviceArray:
+  def cont_time_dyn(self, x: ArrayImpl, u: ArrayImpl, k: int = 0, *args) -> ArrayImpl:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): (nx,)
-        u (DeviceArray): (nu,)
+        x (ArrayImpl): (nx,)
+        u (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     x0_dot = x[3] * jnp.cos(x[2])
     x1_dot = x[3] * jnp.sin(x[2])
@@ -136,18 +129,16 @@ class PointMass2D(DynamicalSystem):
     super(PointMass2D, self).__init__(4, 2, T)
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
-  ) -> DeviceArray:
+  def cont_time_dyn(self, x: ArrayImpl, u: ArrayImpl, k: int = 0, *args) -> ArrayImpl:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): (nx,)
-        u (DeviceArray): (nu,)
+        x (ArrayImpl): (nx,)
+        u (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     x0_dot = x[2]
     x1_dot = x[3]
@@ -190,18 +181,16 @@ class Bicycle4D(DynamicalSystem):
     super(Bicycle4D, self).__init__(4, 2, T)
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
-  ) -> DeviceArray:
+  def cont_time_dyn(self, x: ArrayImpl, u: ArrayImpl, k: int = 0, *args) -> ArrayImpl:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): (nx,)
-        u (DeviceArray): (nu,)
+        x (ArrayImpl): (nx,)
+        u (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     beta = jnp.arctan((self._l_r / (self._l_f + self._l_r)) * jnp.tan(u[1]))
 
@@ -227,18 +216,16 @@ class Car4D(DynamicalSystem):
     super(Car4D, self).__init__(4, 2, T)
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
-  ) -> DeviceArray:
+  def cont_time_dyn(self, x: ArrayImpl, u: ArrayImpl, k: int = 0, *args) -> ArrayImpl:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): (nx,)
-        u (DeviceArray): (nu,)
+        x (ArrayImpl): (nx,)
+        u (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     x0_dot = x[3] * jnp.cos(x[2])
     x1_dot = x[3] * jnp.sin(x[2])
@@ -265,18 +252,16 @@ class Car5D(DynamicalSystem):
     super(Car5D, self).__init__(5, 2, T)
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u: DeviceArray, k: int = 0, *args
-  ) -> DeviceArray:
+  def cont_time_dyn(self, x: ArrayImpl, u: ArrayImpl, k: int = 0, *args) -> ArrayImpl:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): (nx,)
-        u (DeviceArray): (nu,)
+        x (ArrayImpl): (nx,)
+        u (ArrayImpl): (nu,)
 
     Returns:
-        DeviceArray: next state (nx,)
+        ArrayImpl: next state (nx,)
     """
     x0_dot = x[4] * jnp.cos(x[2])
     x1_dot = x[4] * jnp.sin(x[2])

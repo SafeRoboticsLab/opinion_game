@@ -8,7 +8,7 @@ Reference: ilqgames/python (David Fridovich-Keil)
 
 from functools import partial
 from jax import jit
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 
 
 class PlayerCost(object):
@@ -35,19 +35,17 @@ class PlayerCost(object):
 
   # ---------------------------- Jitted functions ------------------------------
   @partial(jit, static_argnums=(0,))
-  def get_cost(
-      self, x: DeviceArray, ui: DeviceArray, k: int = 0
-  ) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx,)
-        ui (DeviceArray): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: cost (scalar)
+        ArrayImpl: cost (scalar)
     """
     total_cost = 0.
     for cost, weight in zip(self._costs, self._weights):
@@ -55,22 +53,20 @@ class PlayerCost(object):
     return total_cost
 
   @partial(jit, static_argnums=(0,))
-  def quadraticize_jitted(
-      self, x: DeviceArray, ui: DeviceArray
-  ) -> DeviceArray:
+  def quadraticize_jitted(self, x: ArrayImpl, ui: ArrayImpl) -> ArrayImpl:
     """
     Calculates the gradients along x and ui.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx, N)
-        ui (DeviceArray): control of the subsystem (nui, N)
+        x (ArrayImpl): concatenated state of all subsystems (nx, N)
+        ui (ArrayImpl): control of the subsystem (nui, N)
 
     Returns:
-        DeviceArray: cost (N,)
-        DeviceArray: gradient dc/dx (nx, N)
-        DeviceArray: gradient dc/dui (nui, N)
-        DeviceArray: Hessian w.r.t. x (nx, nx, N)
-        DeviceArray: Hessian w.r.t. ui (nui, nui, N)
+        ArrayImpl: cost (N,)
+        ArrayImpl: gradient dc/dx (nx, N)
+        ArrayImpl: gradient dc/dui (nui, N)
+        ArrayImpl: Hessian w.r.t. x (nx, nx, N)
+        ArrayImpl: Hessian w.r.t. ui (nui, nui, N)
     """
     total_cost = 0.
     total_dcdx = 0.

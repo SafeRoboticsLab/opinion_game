@@ -59,37 +59,31 @@ car_R_goal_psi_cost = ReferenceDeviationCost(
 )  # Tracks the target heading.
 
 car_R_goal_vel_cost = ReferenceDeviationCost(
-    reference=config.GOAL_VEL, dimension=car_R_vel_index, is_x=True,
-    name="car_R_goal_vel", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_R._u_dim
+    reference=config.GOAL_VEL, dimension=car_R_vel_index, is_x=True, name="car_R_goal_vel",
+    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Tracks the target velocity.
 
 car_R_maxv_cost = MaxVelCostPxDependent(
     v_index=car_R_vel_index, px_index=car_R_px_index, max_v=config.MAXV,
-    px_lb=config.TOLL_STATION_PX_LB, px_ub=config.TOLL_STATION_PX_UB,
-    name="car_R_maxv", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+    px_lb=config.TOLL_STATION_PX_LB, px_ub=config.TOLL_STATION_PX_UB, name="car_R_maxv",
+    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Penalizes car speed above a threshold near the toll station.
 
 car_R_lower_road_cost = SemiquadraticCost(
-    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD,
-    oriented_right=False, is_x=True, name="car_R_lower_road_cost",
-    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD, oriented_right=False,
+    is_x=True, name="car_R_lower_road_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )
 car_R_upper_road_cost = SemiquadraticCost(
-    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD,
-    oriented_right=True, is_x=True, name="car_R_upper_road_cost",
-    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+    dimension=car_R_py_index, threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD, oriented_right=True,
+    is_x=True, name="car_R_upper_road_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Round boundary costs.
 
 car_R_min_vel_cost = SemiquadraticCost(
-    dimension=car_R_vel_index, threshold=config.MINV, oriented_right=False,
-    is_x=True, name="car_R_min_vel_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_R._u_dim
+    dimension=car_R_vel_index, threshold=config.MINV, oriented_right=False, is_x=True,
+    name="car_R_min_vel_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Minimum velocity constraint.
 
-car_R_a_cost = QuadraticCost(
-    0, 0.0, False, "car_R_a_cost", HORIZON_STEPS, x_dim, car_R._u_dim
-)
+car_R_a_cost = QuadraticCost(0, 0.0, False, "car_R_a_cost", HORIZON_STEPS, x_dim, car_R._u_dim)
 car_R_w_cost = QuadraticCost(
     1, 0.0, False, "car_R_w_cost", HORIZON_STEPS, x_dim, car_R._u_dim
 )  # Control costs.
@@ -97,13 +91,11 @@ car_R_w_cost = QuadraticCost(
 ctrl_slack = config.CTRL_LIMIT_SLACK_MULTIPLIER
 car_R_a_constr_cost = BoxInputConstraintCost(
     0, ctrl_slack * config.A_MIN, ctrl_slack * config.A_MAX, q1=1., q2=5.,
-    name="car_R_a_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_R._u_dim
+    name="car_R_a_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )
 car_R_w_constr_cost = BoxInputConstraintCost(
     1, ctrl_slack * config.W_MIN, ctrl_slack * config.W_MAX, q1=1., q2=5.,
-    name="car_R_w_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_R._u_dim
+    name="car_R_w_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Control constraint costs.
 
 #   -> Car H
@@ -119,50 +111,42 @@ car_H_goal_psi_cost = ReferenceDeviationCost(
 )  # Tracks the target heading.
 
 car_H_goal_vel_cost = ReferenceDeviationCost(
-    reference=config.GOAL_VEL, dimension=car_H_vel_index, is_x=True,
-    name="car_H_goal_vel", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_H._u_dim
+    reference=config.GOAL_VEL, dimension=car_H_vel_index, is_x=True, name="car_H_goal_vel",
+    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
 )  # Tracks the target velocity.
 
 car_H_maxv_cost = MaxVelCostPxDependent(
     v_index=car_H_vel_index, px_index=car_H_px_index, max_v=config.MAXV,
-    px_lb=config.TOLL_STATION_PX_LB, px_ub=config.TOLL_STATION_PX_UB,
-    name="car_H_maxv", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+    px_lb=config.TOLL_STATION_PX_LB, px_ub=config.TOLL_STATION_PX_UB, name="car_H_maxv",
+    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
 )  # Penalizes car speed above a threshold near the toll station.
 
 car_H_lower_road_cost = SemiquadraticCost(
-    dimension=car_H_py_index, threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD,
-    oriented_right=False, is_x=True, name="car_H_lower_road_cost",
-    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
+    dimension=car_H_py_index, threshold=config.ROAD_BOUNDARY_LOWER_THRESHOLD, oriented_right=False,
+    is_x=True, name="car_H_lower_road_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
 )
 car_H_upper_road_cost = SemiquadraticCost(
-    dimension=car_H_py_index, threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD,
-    oriented_right=True, is_x=True, name="car_H_upper_road_cost",
-    horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
+    dimension=car_H_py_index, threshold=config.ROAD_BOUNDARY_UPPER_THRESHOLD, oriented_right=True,
+    is_x=True, name="car_H_upper_road_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
 )  # Round boundary costs.
 
 car_H_min_vel_cost = SemiquadraticCost(
-    dimension=car_H_vel_index, threshold=config.MINV, oriented_right=False,
-    is_x=True, name="car_H_min_vel_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_H._u_dim
+    dimension=car_H_vel_index, threshold=config.MINV, oriented_right=False, is_x=True,
+    name="car_H_min_vel_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
 )  # Minimum velocity constraint.
 
-car_H_a_cost = QuadraticCost(
-    0, 0.0, False, "car_H_a_cost", HORIZON_STEPS, x_dim, car_H._u_dim
-)
+car_H_a_cost = QuadraticCost(0, 0.0, False, "car_H_a_cost", HORIZON_STEPS, x_dim, car_H._u_dim)
 car_H_w_cost = QuadraticCost(
     1, 0.0, False, "car_H_w_cost", HORIZON_STEPS, x_dim, car_H._u_dim
 )  # Control costs.
 
 car_H_a_constr_cost = BoxInputConstraintCost(
     0, ctrl_slack * config.A_MIN, ctrl_slack * config.A_MAX, q1=1., q2=5.,
-    name="car_H_a_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_H._u_dim
+    name="car_H_a_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
 )
 car_H_w_constr_cost = BoxInputConstraintCost(
     1, ctrl_slack * config.W_MIN, ctrl_slack * config.W_MAX, q1=1., q2=5.,
-    name="car_H_w_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim,
-    ui_dim=car_H._u_dim
+    name="car_H_w_constr_cost", horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
 )  # Control constraint costs.
 
 # Proximity costs.
@@ -212,16 +196,16 @@ ts_px = config.TOLL_STATION_PX_LB
 ts_py = config.TOLL_STATION_2_PY
 while ts_px < config.TOLL_STATION_PX_UB:
   car_R_toll_station_cost_tmp = ProximityCost(
-      position_indices=car_R_position_indices_in_product_state, point_px=ts_px,
-      point_py=ts_py, max_distance=config.TOLL_STATION_WIDTH, name="",
-      horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_R._u_dim
+      position_indices=car_R_position_indices_in_product_state, point_px=ts_px, point_py=ts_py,
+      max_distance=config.TOLL_STATION_WIDTH, name="", horizon=HORIZON_STEPS, x_dim=x_dim,
+      ui_dim=car_R._u_dim
   )
   car_R_cost.add_cost(car_R_toll_station_cost_tmp, "x", 150.0)
 
   car_H_toll_station_cost_tmp = ProximityCost(
-      position_indices=car_H_position_indices_in_product_state, point_px=ts_px,
-      point_py=ts_py, max_distance=config.TOLL_STATION_WIDTH, name="",
-      horizon=HORIZON_STEPS, x_dim=x_dim, ui_dim=car_H._u_dim
+      position_indices=car_H_position_indices_in_product_state, point_px=ts_px, point_py=ts_py,
+      max_distance=config.TOLL_STATION_WIDTH, name="", horizon=HORIZON_STEPS, x_dim=x_dim,
+      ui_dim=car_H._u_dim
   )
   car_H_cost.add_cost(car_H_toll_station_cost_tmp, "x", 150.0)
 
@@ -248,27 +232,23 @@ car_H_alphas = jnp.zeros((car_H._u_dim, HORIZON_STEPS))
 
 # Sets up intent-dependent cost (Tracks the target lane (y-position)).
 car_R_tgt_booth_cost_1 = ReferenceDeviationCostPxDependent(
-    reference=config.GOAL_PY_1, dimension=car_R_py_index,
-    px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
-    name="car_R_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
+    reference=config.GOAL_PY_1, dimension=car_R_py_index, px_dim=car_R_px_index,
+    px_lb=config.GOAL_PX_LB, name="car_R_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_R._u_dim
 )
 car_R_tgt_booth_cost_2 = ReferenceDeviationCostPxDependent(
-    reference=config.GOAL_PY_2, dimension=car_R_py_index,
-    px_dim=car_R_px_index, px_lb=config.GOAL_PX_LB,
-    name="car_R_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
+    reference=config.GOAL_PY_2, dimension=car_R_py_index, px_dim=car_R_px_index,
+    px_lb=config.GOAL_PX_LB, name="car_R_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_R._u_dim
 )
 car_H_tgt_booth_cost_1 = ReferenceDeviationCostPxDependent(
-    reference=config.GOAL_PY_1, dimension=car_H_py_index,
-    px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
-    name="car_H_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
+    reference=config.GOAL_PY_1, dimension=car_H_py_index, px_dim=car_H_px_index,
+    px_lb=config.GOAL_PX_LB, name="car_H_tgt_booth_cost_1", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_H._u_dim
 )
 car_H_tgt_booth_cost_2 = ReferenceDeviationCostPxDependent(
-    reference=config.GOAL_PY_2, dimension=car_H_py_index,
-    px_dim=car_H_px_index, px_lb=config.GOAL_PX_LB,
-    name="car_H_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
+    reference=config.GOAL_PY_2, dimension=car_H_py_index, px_dim=car_H_px_index,
+    px_lb=config.GOAL_PX_LB, name="car_H_tgt_booth_cost_2", horizon=HORIZON_STEPS, x_dim=x_dim,
     ui_dim=car_H._u_dim
 )
 
@@ -297,28 +277,28 @@ alpha_scaling = np.linspace(0.01, 2.0, config.ALPHA_SCALING_NUM)
 # alpha_scaling = np.logspace(-2, -0.04, config.ALPHA_SCALING_NUM)
 
 solver11 = ILQSolver(
-    jnt_sys, [car_R_cost_subgame11, car_H_cost_subgame11],
-    [car_R_Ps, car_H_Ps], [car_R_alphas, car_H_alphas], alpha_scaling,
-    config.MAX_ITER, u_constraints=[u_constraints_car_R, u_constraints_car_H],
-    verbose=config.VERBOSE, name="subgame_11"
+    jnt_sys, [car_R_cost_subgame11, car_H_cost_subgame11], [car_R_Ps, car_H_Ps],
+    [car_R_alphas, car_H_alphas], alpha_scaling, config.MAX_ITER,
+    u_constraints=[u_constraints_car_R,
+                   u_constraints_car_H], verbose=config.VERBOSE, name="subgame_11"
 )
 solver12 = ILQSolver(
-    jnt_sys, [car_R_cost_subgame12, car_H_cost_subgame12],
-    [car_R_Ps, car_H_Ps], [car_R_alphas, car_H_alphas], alpha_scaling,
-    config.MAX_ITER, u_constraints=[u_constraints_car_R, u_constraints_car_H],
-    verbose=config.VERBOSE, name="subgame_12"
+    jnt_sys, [car_R_cost_subgame12, car_H_cost_subgame12], [car_R_Ps, car_H_Ps],
+    [car_R_alphas, car_H_alphas], alpha_scaling, config.MAX_ITER,
+    u_constraints=[u_constraints_car_R,
+                   u_constraints_car_H], verbose=config.VERBOSE, name="subgame_12"
 )
 solver21 = ILQSolver(
-    jnt_sys, [car_R_cost_subgame21, car_H_cost_subgame21],
-    [car_R_Ps, car_H_Ps], [car_R_alphas, car_H_alphas], alpha_scaling,
-    config.MAX_ITER, u_constraints=[u_constraints_car_R, u_constraints_car_H],
-    verbose=config.VERBOSE, name="subgame_21"
+    jnt_sys, [car_R_cost_subgame21, car_H_cost_subgame21], [car_R_Ps, car_H_Ps],
+    [car_R_alphas, car_H_alphas], alpha_scaling, config.MAX_ITER,
+    u_constraints=[u_constraints_car_R,
+                   u_constraints_car_H], verbose=config.VERBOSE, name="subgame_21"
 )
 solver22 = ILQSolver(
-    jnt_sys, [car_R_cost_subgame22, car_H_cost_subgame22],
-    [car_R_Ps, car_H_Ps], [car_R_alphas, car_H_alphas], alpha_scaling,
-    config.MAX_ITER, u_constraints=[u_constraints_car_R, u_constraints_car_H],
-    verbose=config.VERBOSE, name="subgame_22"
+    jnt_sys, [car_R_cost_subgame22, car_H_cost_subgame22], [car_R_Ps, car_H_Ps],
+    [car_R_alphas, car_H_alphas], alpha_scaling, config.MAX_ITER,
+    u_constraints=[u_constraints_car_R,
+                   u_constraints_car_H], verbose=config.VERBOSE, name="subgame_22"
 )
 
 subgames = [[solver11, solver12], [solver21, solver22]]
@@ -364,8 +344,8 @@ W_R = np.diag([5.0, 5.0])
 W_H = np.diag([5.0, 5.0])
 
 planner = RHCPlanner(
-    subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL0',
-    config=config, W_ctrl=[W_R, W_H]
+    subgames, N_sim, jnt_sys, TwoCar_casadi, GiNOD, method='QMDPL0', config=config,
+    W_ctrl=[W_R, W_H]
 )
 planner.plan(jnt_x0, z0)
 

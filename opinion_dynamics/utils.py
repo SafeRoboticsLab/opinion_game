@@ -7,20 +7,20 @@ Author: Haimin Hu (haiminh@princeton.edu)
 
 from functools import partial
 from jax import jit
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 
 @partial(jit, static_argnums=(1,))
-def softmax(z: DeviceArray, idx: int) -> DeviceArray:
+def softmax(z: ArrayImpl, idx: int) -> ArrayImpl:
   """
   Softmax operator.
 
   Args:
-      z (DeviceArray): vector
+      z (ArrayImpl): vector
       idx (int): index
 
   Returns:
-      DeviceArray: output
+      ArrayImpl: output
   """
   return jnp.exp(z[idx]) / jnp.sum(jnp.exp(z))

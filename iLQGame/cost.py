@@ -8,7 +8,7 @@ Reference: ilqgames/python (David Fridovich-Keil, Ellis Ratner)
 
 from functools import partial
 from jax import jit, lax, jacfwd, hessian
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 from opinion_dynamics.utils import softmax
@@ -27,33 +27,33 @@ class Cost(object):
     self._ui_dim = ui_dim
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl, k: int = 0) -> ArrayImpl:
     """
     Abstract method.
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx,)
-        ui (DeviceArray): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     raise NotImplementedError("get_cost is not implemented.")
 
   @partial(jit, static_argnums=(0,))
-  def get_traj_cost(self, x: DeviceArray, ui: DeviceArray) -> DeviceArray:
+  def get_traj_cost(self, x: ArrayImpl, ui: ArrayImpl) -> ArrayImpl:
     """
     Evaluates this cost function along the given input state and/or control
     trajectory.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx, N)
-        ui (DeviceArray): control of the subsystem (nui, N)
+        x (ArrayImpl): concatenated state of all subsystems (nx, N)
+        ui (ArrayImpl): control of the subsystem (nui, N)
 
     Returns:
-        DeviceArray: costs (N,)
+        ArrayImpl: costs (N,)
     """
 
     @jit
@@ -66,35 +66,35 @@ class Cost(object):
     return costs
 
   @partial(jit, static_argnums=(0,))
-  def get_grad(self, x: DeviceArray, ui: DeviceArray, k: int = 0) -> DeviceArray:
+  def get_grad(self, x: ArrayImpl, ui: ArrayImpl, k: int = 0) -> ArrayImpl:
     """
     Calculates the gradient w.r.t. state x, i.e. dc/dx, at (x, ui, k), and
     the gradient w.r.t. control ui, i.e. dc/dui, at (x, ui, k).
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx,)
-        ui (DeviceArray): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: gradient dc/dx (nx,)
-        DeviceArray: gradient dc/dui (nui,)
+        ArrayImpl: gradient dc/dx (nx,)
+        ArrayImpl: gradient dc/dui (nui,)
     """
     _gradients = jacfwd(self.get_cost, argnums=[0, 1])
     return _gradients(x, ui, k)
 
   @partial(jit, static_argnums=(0,))
-  def get_traj_grad(self, x: DeviceArray, ui: DeviceArray) -> DeviceArray:
+  def get_traj_grad(self, x: ArrayImpl, ui: ArrayImpl) -> ArrayImpl:
     """
     Calculates gradients along the given input state and/or control trajectory.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx, N)
-        ui (DeviceArray): control of the subsystem (nui, N)
+        x (ArrayImpl): concatenated state of all subsystems (nx, N)
+        ui (ArrayImpl): control of the subsystem (nui, N)
 
     Returns:
-        DeviceArray: gradient dc/dx (nx, N)
-        DeviceArray: gradient dc/dui (nui, N)
+        ArrayImpl: gradient dc/dx (nx, N)
+        ArrayImpl: gradient dc/dui (nui, N)
     """
 
     @jit
@@ -111,35 +111,35 @@ class Cost(object):
     return lxs, lus
 
   @partial(jit, static_argnums=(0,))
-  def get_hess(self, x: DeviceArray, ui: DeviceArray, k: int = 0) -> DeviceArray:
+  def get_hess(self, x: ArrayImpl, ui: ArrayImpl, k: int = 0) -> ArrayImpl:
     """
     Calculates the Hessians w.r.t. state x and control ui at (x, ui, k).
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx,)
-        ui (DeviceArray): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: Hessian w.r.t. x (nx, nx)
-        DeviceArray: Hessian w.r.t. ui (nui, nui)
+        ArrayImpl: Hessian w.r.t. x (nx, nx)
+        ArrayImpl: Hessian w.r.t. ui (nui, nui)
     """
     _Hxx = hessian(self.get_cost, argnums=0)
     _Huu = hessian(self.get_cost, argnums=1)
     return _Hxx(x, ui, k), _Huu(x, ui, k)
 
   @partial(jit, static_argnums=(0,))
-  def get_traj_hess(self, x: DeviceArray, ui: DeviceArray) -> DeviceArray:
+  def get_traj_hess(self, x: ArrayImpl, ui: ArrayImpl) -> ArrayImpl:
     """
     Calculates Hessians along the given input state and/or control trajectory.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx, N)
-        ui (DeviceArray): control of the subsystem (nui, N)
+        x (ArrayImpl): concatenated state of all subsystems (nx, N)
+        ui (ArrayImpl): control of the subsystem (nui, N)
 
     Returns:
-        DeviceArray: Hessian w.r.t. x (nx, nx, N)
-        DeviceArray: Hessian w.r.t. ui (nui, nui, N)
+        ArrayImpl: Hessian w.r.t. x (nx, nx, N)
+        ArrayImpl: Hessian w.r.t. ui (nui, nui, N)
     """
 
     @jit
@@ -174,17 +174,17 @@ class ObstacleCost(Cost):
     super(ObstacleCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     # Computes the relative distance.
     dx = x[self._x_index] - self._point.x
@@ -214,17 +214,17 @@ class ProductStateProximityCostTwoPlayer(Cost):
     super(ProductStateProximityCostTwoPlayer, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state vector of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state vector of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     total_cost = 0.
     jsqrt = jnp.sqrt
@@ -274,17 +274,17 @@ class ProductStateProximityCostThreePlayer(Cost):
     super(ProductStateProximityCostThreePlayer, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state vector of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state vector of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     total_cost = 0.
     jsqrt = jnp.sqrt
@@ -338,17 +338,17 @@ class ProximityCost(Cost):
     super(ProximityCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state of the two systems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of the two systems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
 
     dx = x[self._x_index] - self._point_px
@@ -377,17 +377,17 @@ class QuadraticCost(Cost):
     super(QuadraticCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl = None, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     if self._is_x:
       return (x[self._dimension] - self._origin)**2
@@ -413,17 +413,17 @@ class QuadraticPolylineCost(Cost):
     super(QuadraticPolylineCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     point = jnp.array((x[self._x_index], x[self._y_index]))
     signed_distance = self._polyline.signed_distance_to(point)
@@ -445,17 +445,17 @@ class ReferenceDeviationCost(Cost):
     super(ReferenceDeviationCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl = None, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     if self._is_x:
       return (x[self._dimension] - self.reference)**2
@@ -478,17 +478,17 @@ class ReferenceDeviationCostPxDependent(Cost):
     super(ReferenceDeviationCostPxDependent, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl = None, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
 
     def true_fn(x):
@@ -520,17 +520,17 @@ class OpnWeightedReferenceDeviationCost(Cost):
     super(OpnWeightedReferenceDeviationCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl = None, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
 
     # This player's opinion state vector.
@@ -572,17 +572,17 @@ class SemiquadraticCost(Cost):
     super(SemiquadraticCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl = None, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
     if self._is_x:
       z = x
@@ -619,17 +619,17 @@ class MaxVelCostPxDependent(Cost):
     super(MaxVelCostPxDependent, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray = None, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl = None, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
 
     def pred(x):
@@ -669,17 +669,17 @@ class SemiquadraticPolylineCost(Cost):
     super(SemiquadraticPolylineCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray, optional): concatenated state of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl, optional): concatenated state of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
 
     def true_fn(abs_signed_distance):
@@ -714,17 +714,17 @@ class BoxInputConstraintCost(Cost):
     super(BoxInputConstraintCost, self).__init__(name, horizon, x_dim, ui_dim)
 
   @partial(jit, static_argnums=(0,))
-  def get_cost(self, x: DeviceArray, ui: DeviceArray = None, k: int = 0) -> DeviceArray:
+  def get_cost(self, x: ArrayImpl, ui: ArrayImpl = None, k: int = 0) -> ArrayImpl:
     """
     Evaluates this cost function on the given input state and/or control.
 
     Args:
-        x (DeviceArray): concatenated state vector of all subsystems (nx,)
-        ui (DeviceArray, optional): control of the subsystem (nui,)
+        x (ArrayImpl): concatenated state vector of all subsystems (nx,)
+        ui (ArrayImpl, optional): control of the subsystem (nui,)
         k (int, optional): time step. Defaults to 0.
 
     Returns:
-        DeviceArray: scalar value of cost (scalar)
+        ArrayImpl: scalar value of cost (scalar)
     """
 
     control = ui[self._u_index]

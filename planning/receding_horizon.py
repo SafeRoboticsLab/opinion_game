@@ -14,8 +14,7 @@ from .qmdp import QMDP
 class RHCPlanner(object):
 
   def __init__(
-      self, subgames, N_sim, ph_sys, ph_sys_casadi, GiNOD, method='QMDPL0',
-      config=None, W_ctrl=None
+      self, subgames, N_sim, ph_sys, ph_sys_casadi, GiNOD, method='QMDPL0', config=None, W_ctrl=None
   ):
     """
     Initializer.
@@ -25,12 +24,8 @@ class RHCPlanner(object):
     self._ph_sys = ph_sys
     self._GiNOD = GiNOD
     self._method = method
-    self._QMDP_P1 = QMDP(
-        ph_sys_casadi, GiNOD, W_ctrl[0], player_id=1, config=config
-    )
-    self._QMDP_P2 = QMDP(
-        ph_sys_casadi, GiNOD, W_ctrl[1], player_id=2, config=config
-    )
+    self._QMDP_P1 = QMDP(ph_sys_casadi, GiNOD, W_ctrl[0], player_id=1, config=config)
+    self._QMDP_P2 = QMDP(ph_sys_casadi, GiNOD, W_ctrl[1], player_id=2, config=config)
     self._look_ahead = config.LOOK_AHEAD
 
   def plan(self, x0, z0):
@@ -100,10 +95,7 @@ class RHCPlanner(object):
       att1_k = zs[nz1 + nz2:nz1 + nz2 + 1, k]
       att2_k = zs[-1, k]
 
-      subgame_k = (
-          Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k, nom_cost1_k,
-          nom_cost2_k
-      )
+      subgame_k = (Z1_k, Z2_k, zeta1_k, zeta2_k, xnom_k, znom1_k, znom2_k, nom_cost1_k, nom_cost2_k)
 
       # Solves QMDP based on current subgames and opinion states.
       if self._method == 'QMDPL0':
@@ -145,9 +137,7 @@ class RHCPlanner(object):
       # Evolves GiNOD.
       x_jnt = np.hstack((xs[:, k], zs[:, k]))
 
-      z_dot_k, H_k, PoI1_k, PoI2_k = self._GiNOD.cont_time_dyn(
-          x_jnt, None, subgame_k
-      )
+      z_dot_k, H_k, PoI1_k, PoI2_k = self._GiNOD.cont_time_dyn(x_jnt, None, subgame_k)
 
       zs[:, k + 1] = zs[:, k] + self._GiNOD._T * np.asarray(z_dot_k)
       Hs[:, :, k] = np.asarray(H_k)

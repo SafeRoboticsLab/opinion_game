@@ -10,7 +10,7 @@ from casadi import vertcat
 
 from functools import partial
 from jax import jit
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 
@@ -41,9 +41,7 @@ class TwoCar8D(object):
     x5_dot = x[7, 0] * np.sin(x[6, 0])
     x6_dot = x[7, 0] * np.tan(u[3, 0]) / self._l
     x7_dot = u[2, 0]
-    return vertcat(
-        x0_dot, x1_dot, x2_dot, x3_dot, x4_dot, x5_dot, x6_dot, x7_dot
-    )
+    return vertcat(x0_dot, x1_dot, x2_dot, x3_dot, x4_dot, x5_dot, x6_dot, x7_dot)
 
   def disc_time_dyn_cas(self, x, u):
     """
@@ -56,15 +54,13 @@ class TwoCar8D(object):
     return x + self._T * self.cont_time_dyn_cas(x, u)
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn_jitted(
-      self, x: DeviceArray, u: DeviceArray
-  ) -> DeviceArray:
+  def cont_time_dyn_jitted(self, x: ArrayImpl, u: ArrayImpl) -> ArrayImpl:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x: state vector (8-by-1 DeviceArray)
-        u: control vector (4-by-1 DeviceArray)
+        x: state vector (8-by-1 ArrayImpl)
+        u: control vector (4-by-1 ArrayImpl)
     """
     x0_dot = x[3] * jnp.cos(x[2])
     x1_dot = x[3] * jnp.sin(x[2])
@@ -74,21 +70,17 @@ class TwoCar8D(object):
     x5_dot = x[7] * jnp.sin(x[6])
     x6_dot = x[7] * jnp.tan(u[3]) / self._l
     x7_dot = u[2]
-    return jnp.hstack(
-        (x0_dot, x1_dot, x2_dot, x3_dot, x4_dot, x5_dot, x6_dot, x7_dot)
-    )
+    return jnp.hstack((x0_dot, x1_dot, x2_dot, x3_dot, x4_dot, x5_dot, x6_dot, x7_dot))
 
   @partial(jit, static_argnums=(0,))
-  def disc_time_dyn_jitted(
-      self, x: DeviceArray, u: DeviceArray
-  ) -> DeviceArray:
+  def disc_time_dyn_jitted(self, x: ArrayImpl, u: ArrayImpl) -> ArrayImpl:
     """
     Computes the one-step evolution of the system in discrete time with Euler
     integration.
 
     Args:
-        x: state vector (8-by-1 DeviceArray)
-        u: control vector (4-by-1 DeviceArray)
+        x: state vector (8-by-1 ArrayImpl)
+        u: control vector (4-by-1 ArrayImpl)
     """
     x_dot = self.cont_time_dyn_jitted(x, u)
     return x + self._T * x_dot

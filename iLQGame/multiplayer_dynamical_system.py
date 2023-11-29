@@ -10,7 +10,7 @@ from typing import Tuple
 
 from functools import partial
 from jax import jit, jacfwd
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 
@@ -38,43 +38,38 @@ class MultiPlayerDynamicalSystem(object):
     self.jac_f = jit(jacfwd(self.disc_time_dyn, argnums=[0, 1]))
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u_list: list, k: int = 0, args=()
-  ) -> list:
+  def cont_time_dyn(self, x: ArrayImpl, u_list: list, k: int = 0, args=()) -> list:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): joint state (nx,)
-        u_list (list of DeviceArray): list of controls [(nu_0,), (nu_1,), ...]
+        x (ArrayImpl): joint state (nx,)
+        u_list (list of ArrayImpl): list of controls [(nu_0,), (nu_1,), ...]
 
     Returns:
-        list of DeviceArray: list of next states [(nx_0,), (nx_1,), ...]
+        list of ArrayImpl: list of next states [(nx_0,), (nx_1,), ...]
     """
     raise NotImplementedError("cont_time_dyn() has not been implemented.")
 
   @partial(jit, static_argnums=(0,))
-  def disc_time_dyn(
-      self, x0: DeviceArray, u0_list: list, k: int = 0, args=()
-  ) -> list:
+  def disc_time_dyn(self, x0: ArrayImpl, u0_list: list, k: int = 0, args=()) -> list:
     """
     Computes the one-step evolution of the system in discrete time with Euler
     integration.
 
     Args:
-        x0 (DeviceArray): joint state (nx,)
-        u0_list (list of DeviceArray): list of controls [(nu_0,), (nu_1,), ...]
+        x0 (ArrayImpl): joint state (nx,)
+        u0_list (list of ArrayImpl): list of controls [(nu_0,), (nu_1,), ...]
 
     Returns:
-        list of DeviceArray: list of next states [(nx_0,), (nx_1,), ...]
+        list of ArrayImpl: list of next states [(nx_0,), (nx_1,), ...]
     """
     x_dot = self.cont_time_dyn(x0, u0_list, k, args)
     return x0 + self._T * x_dot
 
   @partial(jit, static_argnums=(0,))
-  def linearize_discrete_jitted(
-      self, x0: DeviceArray, u0_list: list, k: int = 0, args=()
-  ) -> Tuple[DeviceArray, list]:
+  def linearize_discrete_jitted(self, x0: ArrayImpl, u0_list: list, k: int = 0,
+                                args=()) -> Tuple[ArrayImpl, list]:
     """
     Compute the Jacobian linearization of the dynamics for a particular
     state `x0` and control `u0`. Outputs `A` and `B` matrices of a
@@ -82,12 +77,12 @@ class MultiPlayerDynamicalSystem(object):
           ``` x(k + 1) - x0 = A (x(k) - x0) + B (u(k) - u0) ```
 
     Args:
-        x0 (DeviceArray): joint state (nx,)
-        u0_list (list of DeviceArray): list of controls [(nu_0,), (nu_1,), ...]
+        x0 (ArrayImpl): joint state (nx,)
+        u0_list (list of ArrayImpl): list of controls [(nu_0,), (nu_1,), ...]
 
     Returns:
-        DeviceArray: the Jacobian of next state w.r.t. x0.
-        list of DeviceArray: the Jacobian of next state w.r.t. u0_i.
+        ArrayImpl: the Jacobian of next state w.r.t. x0.
+        list of ArrayImpl: the Jacobian of next state w.r.t. u0_i.
     """
     A_disc, B_disc = self.jac_f(x0, u0_list, k, args)
     return A_disc, B_disc
@@ -129,9 +124,7 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
     self._LMx = [np.zeros((xi_dim, self._x_dim)) for xi_dim in self._x_dims]
 
     for i in range(len(self._x_dims)):
-      self._LMx[i][:, _split_index[i]:_split_index[i + 1]] = np.eye(
-          self._x_dims[i]
-      )
+      self._LMx[i][:, _split_index[i]:_split_index[i + 1]] = np.eye(self._x_dims[i])
       self._LMx[i] = jnp.asarray(self._LMx[i])
 
     # Creates lifting matrices LMu_i for subsystem i such that LMu_i @ u = ui.
@@ -156,23 +149,19 @@ class ProductMultiPlayerDynamicalSystem(MultiPlayerDynamicalSystem):
     self._x_dims.append(opn_dyns._x_dim)
 
     self.update_lifting_matrices()
-    self._LMx += [
-        jnp.eye(self._x_dim)
-    ] * self._num_opn_dyn  # opn. dyns. take in the joint state
+    self._LMx += [jnp.eye(self._x_dim)] * self._num_opn_dyn  # opn. dyns. take in the joint state
 
   @partial(jit, static_argnums=(0,))
-  def cont_time_dyn(
-      self, x: DeviceArray, u_list: list, k: int = 0, args=()
-  ) -> list:
+  def cont_time_dyn(self, x: ArrayImpl, u_list: list, k: int = 0, args=()) -> list:
     """
     Computes the time derivative of state for a particular state/control.
 
     Args:
-        x (DeviceArray): joint state (nx,)
-        u_list (list of DeviceArray): list of controls [(nu_0,), (nu_1,), ...]
+        x (ArrayImpl): joint state (nx,)
+        u_list (list of ArrayImpl): list of controls [(nu_0,), (nu_1,), ...]
 
     Returns:
-        list of DeviceArray: list of next states [(nx_0,), (nx_1,), ...]
+        list of ArrayImpl: list of next states [(nx_0,), (nx_1,), ...]
     """
     u_list += [None] * self._num_opn_dyn
     x_dot_list = [

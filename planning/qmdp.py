@@ -11,7 +11,7 @@ from casadi import *
 import jax
 from functools import partial
 from jax import jit
-from jaxlib.xla_extension import DeviceArray
+from jaxlib.xla_extension import ArrayImpl
 import jax.numpy as jnp
 
 from .utils import softmax
@@ -32,45 +32,38 @@ class QMDP(object):
 
     # vmap functions for level-1-QMDP
     self._disc_dyn_vmap = jit(
-        jax.vmap(
-            self._ph_sys.disc_time_dyn_jitted, in_axes=(None, 1), out_axes=(1)
-        )
+        jax.vmap(self._ph_sys.disc_time_dyn_jitted, in_axes=(None, 1), out_axes=(1))
     )
 
     self._GiNOD_dyn_vmap = jit(
         jax.vmap(
-            self._GiNOD.disc_dyn_jitted,
-            in_axes=(1, None, None, None, None, None, None), out_axes=(1)
+            self._GiNOD.disc_dyn_jitted, in_axes=(1, None, None, None, None, None, None),
+            out_axes=(1)
         )
     )
 
     self._l1_cost_vmap = jit(
-        jax.vmap(
-            self.level_1_cost_jitted, in_axes=(1, 1, 1, 1, None), out_axes=(0)
-        )
+        jax.vmap(self.level_1_cost_jitted, in_axes=(1, 1, 1, 1, None), out_axes=(0))
     )
 
   @partial(jit, static_argnums=(0,))
   def level_1_cost_jitted(self, x, z1, z2, u_ego, _cost_params):
 
-    def softmax(z: DeviceArray, idx: int) -> DeviceArray:
+    def softmax(z: ArrayImpl, idx: int) -> ArrayImpl:
       return jnp.exp(z[idx]) / jnp.sum(jnp.exp(z))
 
     def value_func(z1, z2, x, xnom, Z, zeta, idx1, idx2):
-      return softmax(z1, idx1) * softmax(
-          z2, idx2
-      ) * (x - xnom).T @ Z @ (x-xnom) + zeta.T @ (x-xnom)
+      return softmax(z1, idx1) * softmax(z2, idx2) * (x - xnom).T @ Z @ (x-xnom) + zeta.T @ (x-xnom)
 
     (
-        unom, xnom11, xnom12, xnom21, xnom22, Z11, Z12, Z21, Z22, zeta11,
-        zeta12, zeta21, zeta22
+        unom, xnom11, xnom12, xnom21, xnom22, Z11, Z12, Z21, Z22, zeta11, zeta12, zeta21, zeta22
     ) = _cost_params
 
     J = (u_ego - unom).T @ self._W_ctrl @ (u_ego-unom) + value_func(
         z1, z2, x, xnom11, Z11, zeta11, 0, 0
-    ) + value_func(z1, z2, x, xnom12, Z12, zeta12, 0, 1) + value_func(
-        z1, z2, x, xnom21, Z21, zeta21, 1, 0
-    ) + value_func(z1, z2, x, xnom22, Z22, zeta22, 1, 1)
+    ) + value_func(z1, z2, x, xnom12, Z12, zeta12, 0,
+                   1) + value_func(z1, z2, x, xnom21, Z21, zeta21, 1,
+                                   0) + value_func(z1, z2, x, xnom22, Z22, zeta22, 1, 1)
 
     return J
 
@@ -107,9 +100,7 @@ class QMDP(object):
       u_opp21 = np.asarray(subgames[1][0]._best_operating_point[1][1])[:, :1]
       u_opp22 = np.asarray(subgames[1][1]._best_operating_point[1][1])[:, :1]
 
-      u_ego_nom = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      )[:, :1]
+      u_ego_nom = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][0])[:, :1]
 
     elif self._player_id == 2:
       u_opp11 = np.asarray(subgames[0][0]._best_operating_point[1][0])[:, :1]
@@ -117,9 +108,7 @@ class QMDP(object):
       u_opp21 = np.asarray(subgames[1][0]._best_operating_point[1][0])[:, :1]
       u_opp22 = np.asarray(subgames[1][1]._best_operating_point[1][0])[:, :1]
 
-      u_ego_nom = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-      )[:, :1]
+      u_ego_nom = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][1])[:, :1]
 
     # Declares the decision variable (ego's control).
     nu = len(self._W_ctrl)
@@ -171,10 +160,9 @@ class QMDP(object):
           zeta_ego = zetas[1, :]
         zeta_ego = zeta_ego[np.newaxis].T
 
-        J += softmax(z1, l1) * softmax(z2, l2) * (
-            (x_next[l1][l2] - xnom).T @ Z_ego @ (x_next[l1][l2] - xnom)
-            + zeta_ego.T @ (x_next[l1][l2] - xnom)
-        )
+        J += softmax(z1, l1) * softmax(z2, l2) * ((x_next[l1][l2] - xnom).T @ Z_ego
+                                                  @ (x_next[l1][l2] - xnom)
+                                                  + zeta_ego.T @ (x_next[l1][l2] - xnom))
 
     opti.minimize(J)
 
@@ -210,9 +198,8 @@ class QMDP(object):
     return u_ego_sol
 
   def plan_level_1(
-      self, x: np.ndarray, z_ego: np.ndarray, z_opp: np.ndarray,
-      att_ego: np.ndarray, att_opp: np.ndarray, subgames: list,
-      subgame_k: tuple
+      self, x: np.ndarray, z_ego: np.ndarray, z_opp: np.ndarray, att_ego: np.ndarray,
+      att_opp: np.ndarray, subgames: list, subgame_k: tuple
   ) -> np.ndarray:
     """
     Level-1 QMDP planning.
@@ -246,38 +233,26 @@ class QMDP(object):
 
     # Gets the opponent's subgame controls and ego's nominal control.
     if self._player_id == 1:
-      uo_0 = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-      )[:, :1]
+      uo_0 = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][1])[:, :1]
 
       uo11_1 = np.asarray(subgames[0][0]._best_operating_point[1][1])[:, 1:2]
       uo12_1 = np.asarray(subgames[0][1]._best_operating_point[1][1])[:, 1:2]
       uo21_1 = np.asarray(subgames[1][0]._best_operating_point[1][1])[:, 1:2]
       uo22_1 = np.asarray(subgames[1][1]._best_operating_point[1][1])[:, 1:2]
 
-      ue_nom_0 = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      )[:, :1]
-      ue_nom_1 = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      )[:, 1:2]
+      ue_nom_0 = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][0])[:, :1]
+      ue_nom_1 = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][0])[:, 1:2]
 
     elif self._player_id == 2:
-      uo_0 = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][0]
-      )[:, :1]
+      uo_0 = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][0])[:, :1]
 
       uo11_1 = np.asarray(subgames[0][0]._best_operating_point[1][0])[:, 1:2]
       uo12_1 = np.asarray(subgames[0][1]._best_operating_point[1][0])[:, 1:2]
       uo21_1 = np.asarray(subgames[1][0]._best_operating_point[1][0])[:, 1:2]
       uo22_1 = np.asarray(subgames[1][1]._best_operating_point[1][0])[:, 1:2]
 
-      ue_nom_0 = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-      )[:, :1]
-      ue_nom_1 = np.asarray(
-          subgames[opn_ego][opn_opp]._best_operating_point[1][1]
-      )[:, 1:2]
+      ue_nom_0 = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][1])[:, :1]
+      ue_nom_1 = np.asarray(subgames[opn_ego][opn_opp]._best_operating_point[1][1])[:, 1:2]
 
     # Declares the decision variable (ego's control).
     nu = len(self._W_ctrl)
@@ -322,9 +297,7 @@ class QMDP(object):
       att1 = att_opp
       att2 = att_ego
 
-    z_next = self._GiNOD.disc_dyn_two_player_casadi(
-        x_next_1, z1, z2, att1, att2, None, subgame_k
-    )
+    z_next = self._GiNOD.disc_dyn_two_player_casadi(x_next_1, z1, z2, att1, att2, None, subgame_k)
     z1_next = z_next[:2]
     z2_next = z_next[2:]
 

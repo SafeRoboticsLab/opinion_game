@@ -2,7 +2,7 @@
 
 
 [![License][license-shield]][license-url]
-[![Python 3.8](https://img.shields.io/badge/python-3.8-blue)](https://www.python.org/downloads/)
+[![Python 3.9](https://img.shields.io/badge/python-3.9-blue)](https://www.python.org/downloads/)
 
 
 <!-- TABLE OF CONTENTS -->
@@ -31,11 +31,12 @@ The ILQ Game implementation is inspired by David Fridovich-Keil's [ilqgames](htt
 ## Dependencies
 
 This repo depends on the following packages:
-1. jax=0.3.17
-2. jaxlib=0.3.15
-3. numpy=1.21.5
-4. python=3.8.13
+1. jax=0.4.19
+2. jaxlib=0.4.16
+3. numpy=1.25.2
+4. python=3.9.18
 5. yaml=0.2.5
+6. casadi=3.6.4
 
 
 ## Example
